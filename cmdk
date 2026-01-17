@@ -96,7 +96,7 @@ get_ai_command() {
             ;;
         codex)
             if command -v codex &>/dev/null; then
-                echo "codex exec --skip-git-repo-check -o /dev/stdout -"
+                echo "CODEX"
             else
                 echo "ERROR: codex not found" >&2
                 return 1
@@ -106,13 +106,33 @@ get_ai_command() {
             if command -v claude &>/dev/null; then
                 echo "claude --print"
             elif command -v codex &>/dev/null; then
-                echo "codex exec --skip-git-repo-check -o /dev/stdout -"
+                echo "CODEX"
             else
                 echo "ERROR: No AI CLI found" >&2
                 return 1
             fi
             ;;
     esac
+}
+
+# Run AI query - handles both claude and codex
+run_ai_query() {
+    local ai_cmd=$(get_ai_command)
+    if [[ $? -ne 0 ]]; then
+        echo "$ai_cmd" >&2
+        return 1
+    fi
+    
+    if [[ "$ai_cmd" == "CODEX" ]]; then
+        local tmpfile=$(mktemp)
+        cat | codex exec --skip-git-repo-check --sandbox read-only -o "$tmpfile" - >/dev/null 2>&1
+        local exit_code=$?
+        cat "$tmpfile"
+        rm -f "$tmpfile"
+        return $exit_code
+    else
+        cat | $ai_cmd
+    fi
 }
 
 # List available AI providers
@@ -339,16 +359,20 @@ PROMPT_EOF
                 # Call AI with spinner
                 echo ""
                 local ai_cmd=$(get_ai_command)
-                if [[ $? -ne 0 ]]; then
-                    gum style --foreground 196 "$ai_cmd"
-                    gum input --placeholder "Press Enter to continue..."
-                    rm -f "$full_prompt"
-                    continue
-                fi
                 local response
-                response=$(gum spin --spinner dot --title "Thinking..." -- \
-                    bash -c "cat '$full_prompt' | $ai_cmd 2>&1")
+                local tmpout=$(mktemp)
+                
+                if [[ "$ai_cmd" == "CODEX" ]]; then
+                    # Codex needs special handling
+                    gum spin --spinner dot --title "Thinking..." -- \
+                        bash -c "codex exec --skip-git-repo-check --sandbox read-only -o '$tmpout' - < '$full_prompt' >/dev/null 2>&1"
+                else
+                    gum spin --spinner dot --title "Thinking..." -- \
+                        bash -c "cat '$full_prompt' | $ai_cmd > '$tmpout' 2>&1"
+                fi
                 local exit_code=$?
+                response=$(cat "$tmpout")
+                rm -f "$tmpout"
                 
                 rm -f "$full_prompt"
                 
@@ -482,12 +506,7 @@ $context
 
 User: $query"
         
-        ai_cmd=$(get_ai_command)
-        if [[ $? -ne 0 ]]; then
-            echo "$ai_cmd" >&2
-            exit 1
-        fi
-        response=$(echo "$prompt" | $ai_cmd 2>&1)
+        response=$(echo "$prompt" | run_ai_query 2>&1)
         echo "$response"
         exit 0
         ;;
@@ -510,12 +529,7 @@ $context
 
 User: $PIPED_INPUT"
             
-            ai_cmd=$(get_ai_command)
-            if [[ $? -ne 0 ]]; then
-                echo "$ai_cmd" >&2
-                exit 1
-            fi
-            response=$(echo "$prompt" | $ai_cmd 2>&1)
+            response=$(echo "$prompt" | run_ai_query 2>&1)
             echo "$response"
             exit 0
         fi

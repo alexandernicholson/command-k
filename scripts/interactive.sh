@@ -165,8 +165,8 @@ main() {
     echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
     echo -e "  ${DIM}Provider: ${CYAN}$provider_name${RESET}"
     echo
-    echo -e "${DIM}Commands: [Enter] Send | [Ctrl+C] Cancel | /clear Reset | /insert Last${RESET}"
-    echo -e "${DIM}          /context Show context | /history Conversation | /settings Settings${RESET}"
+    echo -e "  ${DIM}Commands: [Enter] Send | [Ctrl+C] Cancel | /clear Reset | /insert Last${RESET}"
+    echo -e "  ${DIM}          /context Show context | /history Conversation | /settings Settings${RESET}"
     echo
 
     # Show if we have an ongoing conversation
@@ -256,19 +256,13 @@ PROMPT_EOF
         echo -e "${DIM}Thinking... ($provider_name)${RESET}"
         echo
 
-        # Call AI
-        AI_CMD=$(get_ai_command)
-        if [[ $? -ne 0 ]]; then
-            echo -e "${RED}$AI_CMD${RESET}"
-            rm -f "$FULL_PROMPT"
-            continue
-        fi
-        RESPONSE=$(cat "$FULL_PROMPT" | $AI_CMD 2>&1)
-        CLAUDE_EXIT=$?
+        # Call AI using run_ai_query
+        RESPONSE=$(cat "$FULL_PROMPT" | run_ai_query 2>&1)
+        AI_EXIT=$?
 
         rm -f "$FULL_PROMPT"
 
-        if [[ $CLAUDE_EXIT -ne 0 ]]; then
+        if [[ $AI_EXIT -ne 0 ]]; then
             echo -e "${RED}Error from $provider_name:${RESET}"
             echo "$RESPONSE"
             echo

@@ -111,8 +111,8 @@ get_all_settings() {
 }
 
 # Get the AI command to use
-# Handles different CLI tools and their flags
-# Usage: prompt | $(get_ai_command)
+# Returns: command string to pipe input to
+# For codex, use run_ai_query function instead
 get_ai_command() {
     local provider=$(get_setting "ai_provider")
     
@@ -127,27 +127,49 @@ get_ai_command() {
             ;;
         codex)
             if command -v codex &>/dev/null; then
-                # Codex CLI: use 'exec' subcommand, reads from stdin
-                # --skip-git-repo-check allows running outside git repos
-                # -o /dev/stdout outputs only the final message
-                echo "codex exec --skip-git-repo-check -o /dev/stdout -"
+                echo "CODEX"  # Special marker - use run_ai_query
             else
                 echo "ERROR: codex not found" >&2
                 return 1
             fi
             ;;
         auto|*)
-            # Auto-detect: prefer claude, fall back to codex
             if command -v claude &>/dev/null; then
                 echo "claude --print"
             elif command -v codex &>/dev/null; then
-                echo "codex exec --skip-git-repo-check -o /dev/stdout -"
+                echo "CODEX"  # Special marker - use run_ai_query
             else
                 echo "ERROR: No AI CLI found (install claude or codex)" >&2
                 return 1
             fi
             ;;
     esac
+}
+
+# Run AI query - handles both claude and codex
+# Usage: echo "prompt" | run_ai_query
+run_ai_query() {
+    local ai_cmd=$(get_ai_command)
+    if [[ $? -ne 0 ]]; then
+        echo "$ai_cmd" >&2
+        return 1
+    fi
+    
+    if [[ "$ai_cmd" == "CODEX" ]]; then
+        # Codex needs special handling:
+        # - --sandbox read-only prevents command execution
+        # - -o file captures only final message
+        # - redirect stdout/stderr to hide agent output
+        local tmpfile=$(mktemp)
+        cat | codex exec --skip-git-repo-check --sandbox read-only -o "$tmpfile" - >/dev/null 2>&1
+        local exit_code=$?
+        cat "$tmpfile"
+        rm -f "$tmpfile"
+        return $exit_code
+    else
+        # Claude and others: simple pipe
+        cat | $ai_cmd
+    fi
 }
 
 # List available AI providers
@@ -178,4 +200,4 @@ get_current_provider_name() {
 }
 
 # Export for use in other scripts
-export -f init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command list_ai_providers get_current_provider_name 2>/dev/null || true
+export -f init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command run_ai_query list_ai_providers get_current_provider_name 2>/dev/null || true
