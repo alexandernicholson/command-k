@@ -37,7 +37,9 @@ tmux source ~/.tmux.conf
 
 ## Requirements
 
-- [Claude Code CLI](https://github.com/anthropics/claude-code) (`claude` command in PATH)
+- **AI CLI (one of):**
+  - [Claude Code](https://github.com/anthropics/claude-code) (`claude`)
+  - [Codex CLI](https://github.com/openai/codex) (`codex`)
 - bash 4+ or zsh
 - **For tmux plugin:** tmux 3.2+ (for `display-popup`)
 - **For standalone CLI:** [gum](https://github.com/charmbracelet/gum)
@@ -91,6 +93,19 @@ cmdk -s
 | `q` | Quit |
 
 ## Configuration
+
+### AI Provider
+
+Command K supports both Claude and Codex. Configure via `/settings` or edit `~/.command-k/settings.conf`:
+
+```bash
+# Options: auto, claude, codex
+ai_provider=auto
+```
+
+`auto` prefers Claude, falls back to Codex if Claude isn't installed.
+
+### tmux Options
 
 Add to `~/.tmux.conf` before the plugin loads:
 

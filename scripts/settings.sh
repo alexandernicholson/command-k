@@ -14,6 +14,7 @@ declare -A DEFAULT_SETTINGS=(
     [send_shell_type]="true"
     [send_terminal_size]="true"
     [send_current_process]="true"
+    [ai_provider]="auto"
 )
 
 # Initialize settings file with defaults if it doesn't exist
@@ -21,7 +22,12 @@ init_settings() {
     if [[ ! -f "$SETTINGS_FILE" ]]; then
         mkdir -p "$(dirname "$SETTINGS_FILE")"
         cat > "$SETTINGS_FILE" << 'EOF'
-# Command K Privacy Settings
+# Command K Settings
+
+# AI Provider: auto, claude, or codex
+ai_provider=auto
+
+# --- Privacy Settings ---
 # Set to "true" or "false"
 
 # Terminal content (last 500 lines of visible output)
@@ -104,5 +110,48 @@ get_all_settings() {
     done
 }
 
+# Get the AI command to use
+get_ai_command() {
+    local provider=$(get_setting "ai_provider")
+    
+    case "$provider" in
+        claude)
+            if command -v claude &>/dev/null; then
+                echo "claude --print"
+            else
+                echo "ERROR: claude not found" >&2
+                return 1
+            fi
+            ;;
+        codex)
+            if command -v codex &>/dev/null; then
+                echo "codex --print"
+            else
+                echo "ERROR: codex not found" >&2
+                return 1
+            fi
+            ;;
+        auto|*)
+            # Auto-detect: prefer claude, fall back to codex
+            if command -v claude &>/dev/null; then
+                echo "claude --print"
+            elif command -v codex &>/dev/null; then
+                echo "codex --print"
+            else
+                echo "ERROR: No AI CLI found (install claude or codex)" >&2
+                return 1
+            fi
+            ;;
+    esac
+}
+
+# List available AI providers
+list_ai_providers() {
+    local available=()
+    command -v claude &>/dev/null && available+=("claude")
+    command -v codex &>/dev/null && available+=("codex")
+    echo "${available[*]}"
+}
+
 # Export for use in other scripts
-export -f init_settings get_setting set_setting toggle_setting get_all_settings 2>/dev/null || true
+export -f init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command list_ai_providers 2>/dev/null || true

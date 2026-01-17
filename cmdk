@@ -65,14 +65,61 @@ fi
 check_deps() {
     local missing=()
     command -v gum &>/dev/null || missing+=("gum")
-    command -v claude &>/dev/null || missing+=("claude")
+    
+    # Check for at least one AI CLI
+    if ! command -v claude &>/dev/null && ! command -v codex &>/dev/null; then
+        missing+=("claude or codex")
+    fi
     
     if [[ ${#missing[@]} -gt 0 ]]; then
         echo "Missing required tools: ${missing[*]}"
         echo "Install gum: https://github.com/charmbracelet/gum"
         echo "Install claude: https://github.com/anthropics/claude-code"
+        echo "Install codex: https://github.com/openai/codex"
         exit 1
     fi
+}
+
+# Get the AI command to use
+get_ai_command() {
+    local provider=$(get_setting "ai_provider")
+    
+    case "$provider" in
+        claude)
+            if command -v claude &>/dev/null; then
+                echo "claude --print"
+            else
+                echo "ERROR: claude not found" >&2
+                return 1
+            fi
+            ;;
+        codex)
+            if command -v codex &>/dev/null; then
+                echo "codex --print"
+            else
+                echo "ERROR: codex not found" >&2
+                return 1
+            fi
+            ;;
+        auto|*)
+            if command -v claude &>/dev/null; then
+                echo "claude --print"
+            elif command -v codex &>/dev/null; then
+                echo "codex --print"
+            else
+                echo "ERROR: No AI CLI found" >&2
+                return 1
+            fi
+            ;;
+    esac
+}
+
+# List available AI providers
+list_ai_providers() {
+    local available=()
+    command -v claude &>/dev/null && available+=("claude")
+    command -v codex &>/dev/null && available+=("codex")
+    echo "${available[*]}"
 }
 
 # Helper to check if setting is enabled
@@ -134,10 +181,13 @@ show_settings() {
     init_settings
     
     while true; do
+        local current_ai=$(get_setting "ai_provider")
+        local available_ai=$(list_ai_providers)
+        
         gum style --border double --padding "1 2" --border-foreground 212 \
-            "$(gum style --bold --foreground 212 'Privacy Settings')" \
+            "$(gum style --bold --foreground 212 'Settings')" \
             "" \
-            "Control what context is sent to Claude"
+            "AI Provider: $current_ai (available: $available_ai)"
         
         echo ""
         
@@ -153,6 +203,8 @@ show_settings() {
         )
         
         local items=()
+        items+=("🤖 Change AI provider")
+        items+=("─────────────")
         for setting in "${settings[@]}"; do
             local key="${setting%%:*}"
             local desc="${setting#*:}"
@@ -168,11 +220,15 @@ show_settings() {
         items+=("Disable all")
         items+=("← Back")
         
-        local choice=$(printf '%s\n' "${items[@]}" | gum choose --height 15)
+        local choice=$(printf '%s\n' "${items[@]}" | gum choose --height 18)
         
         case "$choice" in
             "← Back"|"") return ;;
             "─────────────") continue ;;
+            "🤖 Change AI provider")
+                local provider=$(gum choose "auto" "claude" "codex")
+                [[ -n "$provider" ]] && set_setting "ai_provider" "$provider"
+                ;;
             "Enable all")
                 for setting in "${settings[@]}"; do
                     set_setting "${setting%%:*}" "true"
@@ -279,11 +335,18 @@ PROMPT_EOF
                 echo "" >> "$full_prompt"
                 echo "## User: $prompt" >> "$full_prompt"
                 
-                # Call Claude with spinner
+                # Call AI with spinner
                 echo ""
+                local ai_cmd=$(get_ai_command)
+                if [[ $? -ne 0 ]]; then
+                    gum style --foreground 196 "$ai_cmd"
+                    gum input --placeholder "Press Enter to continue..."
+                    rm -f "$full_prompt"
+                    continue
+                fi
                 local response
                 response=$(gum spin --spinner dot --title "Thinking..." -- \
-                    bash -c "cat '$full_prompt' | claude --print 2>&1")
+                    bash -c "cat '$full_prompt' | $ai_cmd 2>&1")
                 local exit_code=$?
                 
                 rm -f "$full_prompt"
@@ -418,7 +481,12 @@ $context
 
 User: $query"
         
-        response=$(echo "$prompt" | claude --print 2>&1)
+        ai_cmd=$(get_ai_command)
+        if [[ $? -ne 0 ]]; then
+            echo "$ai_cmd" >&2
+            exit 1
+        fi
+        response=$(echo "$prompt" | $ai_cmd 2>&1)
         echo "$response"
         exit 0
         ;;
@@ -441,7 +509,12 @@ $context
 
 User: $PIPED_INPUT"
             
-            response=$(echo "$prompt" | claude --print 2>&1)
+            ai_cmd=$(get_ai_command)
+            if [[ $? -ne 0 ]]; then
+                echo "$ai_cmd" >&2
+                exit 1
+            fi
+            response=$(echo "$prompt" | $ai_cmd 2>&1)
             echo "$response"
             exit 0
         fi

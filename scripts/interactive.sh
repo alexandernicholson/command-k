@@ -62,15 +62,24 @@ show_history() {
     fi
 }
 
-# Privacy settings menu
+# Settings menu
 show_settings() {
     while true; do
         clear
         echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
-        echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Privacy Settings${RESET} - Control what context is sent          ${BOLD}${CYAN}║${RESET}"
+        echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Settings${RESET}                                                  ${BOLD}${CYAN}║${RESET}"
         echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
         echo
-        echo -e "${DIM}Toggle settings by entering the number. Press 'q' to go back.${RESET}"
+        
+        # AI Provider
+        local current_ai=$(get_setting "ai_provider")
+        local available_ai=$(list_ai_providers)
+        echo -e "${BOLD}AI Provider:${RESET} ${CYAN}$current_ai${RESET} ${DIM}(available: $available_ai)${RESET}"
+        echo -e "  ${DIM}[p] Change provider${RESET}"
+        echo
+        
+        echo -e "${BOLD}Privacy - Context sent to AI:${RESET}"
+        echo -e "${DIM}Toggle by entering the number.${RESET}"
         echo
         
         local settings=(
@@ -105,6 +114,20 @@ show_settings() {
         read -r choice
         
         case "$choice" in
+            p|P)
+                echo
+                echo -e "Select AI provider:"
+                echo -e "  [1] auto (prefer claude, fallback to codex)"
+                echo -e "  [2] claude"
+                echo -e "  [3] codex"
+                echo -n "> "
+                read -r ai_choice
+                case "$ai_choice" in
+                    1) set_setting "ai_provider" "auto" ;;
+                    2) set_setting "ai_provider" "claude" ;;
+                    3) set_setting "ai_provider" "codex" ;;
+                esac
+                ;;
             [1-8])
                 local idx=$((choice - 1))
                 local key="${settings[$idx]%%:*}"
@@ -230,7 +253,13 @@ PROMPT_EOF
         echo
 
         # Call Claude Code
-        RESPONSE=$(cat "$FULL_PROMPT" | claude --print 2>&1)
+        AI_CMD=$(get_ai_command)
+        if [[ $? -ne 0 ]]; then
+            echo -e "${RED}$AI_CMD${RESET}"
+            rm -f "$FULL_PROMPT"
+            continue
+        fi
+        RESPONSE=$(cat "$FULL_PROMPT" | $AI_CMD 2>&1)
         CLAUDE_EXIT=$?
 
         rm -f "$FULL_PROMPT"
