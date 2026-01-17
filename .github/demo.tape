@@ -1,76 +1,75 @@
-# VHS Demo for Command K
+# VHS Demo for Command K - Real functionality
 # https://github.com/charmbracelet/vhs
 
 Output demo.gif
 Set Shell "bash"
-Set FontSize 16
-Set Width 900
-Set Height 500
-Set Padding 15
+Set FontSize 15
+Set Width 1100
+Set Height 650
+Set Padding 10
 Set Theme "Catppuccin Mocha"
+Set TypingSpeed 50ms
 
-# Start in a project directory
-Type "cd ~/projects/api && git status"
+# Ensure clean state
+Hide
+Type "tmux kill-server 2>/dev/null; sleep 0.5"
 Enter
-Sleep 1.5s
-
-Type "# Hmm, I need to undo my last commit..."
+Type "source ~/.tmux.conf 2>/dev/null"
 Enter
-Sleep 1s
+Sleep 500ms
+Show
 
-Type "# Let me use Command K! (prefix + Ctrl-k)"
-Enter
-Sleep 1.5s
-
-# Simulate the popup appearance
-Type "clear"
+# Show we're in the command-k repo
+Type "cd ~/.tmux/plugins/command-k"
 Enter
 Sleep 300ms
 
-# Show a cleaner mock of the UI
-Type "cat << 'EOF'"
+Type "git log --oneline -3"
 Enter
-Type "╭──────────────────────────────────────────────────╮"
-Enter
-Type "│  ⌘K  Command K                                   │"
-Enter
-Type "╰──────────────────────────────────────────────────╯"
-Enter
-Type ""
-Enter
-Type "What do you need?"
-Enter
-Type "> undo last commit but keep changes"
-Enter
-Type ""
-Enter
-Type "Thinking..."
-Enter
-Type ""
-Enter
-Type "━━━ Response ━━━"
-Enter
-Type "git reset --soft HEAD~1"
-Enter
-Type "━━━━━━━━━━━━━━━━━"
-Enter
-Type ""
-Enter
-Type "[i]nsert  [c]opy  [f]ollow-up  [q]uit"
-Enter
-Type "EOF"
-Enter
-Sleep 2s
+Sleep 1s
 
-Type "# Pressed 'i' - command inserted!"
+Type "# I want a prettier git log... let me ask Command K!"
+Enter
+Sleep 1.5s
+
+# Start tmux session
+Type "tmux"
+Enter
+Sleep 1s
+
+# Navigate to repo in tmux
+Type "cd ~/.tmux/plugins/command-k && clear"
 Enter
 Sleep 500ms
 
-Type "git reset --soft HEAD~1"
-Sleep 1s
-Enter
-Sleep 1s
+# Trigger Command K (prefix + C-k)
+Ctrl+b
+Ctrl+k
 
-Type "git status"
-Enter
+# Wait for popup to appear
 Sleep 2s
+
+# Type the query
+Type "git log with colors, graph, oneline, showing all branches"
+
+Sleep 500ms
+Enter
+
+# Wait for Claude response
+Sleep 12s
+
+# Insert the result
+Type "i"
+
+# Wait for popup to close and command to be inserted
+Sleep 2s
+
+# Execute the inserted command
+Enter
+
+# Show the beautiful output
+Sleep 4s
+
+# Clean exit
+Ctrl+d
+Sleep 500ms
