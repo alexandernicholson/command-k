@@ -30,7 +30,7 @@ while IFS= read -r line; do
 done < "$PROMPT_HISTORY_FILE"
 
 # Clean exit on Ctrl+C
-trap 'echo; exit 0' INT TERM
+trap 'clear 2>/dev/null; exit 0' INT TERM HUP
 
 # Colors
 BOLD='\033[1m'
@@ -363,8 +363,9 @@ insert_result() {
 
 # Cleanup on exit
 cleanup() {
-    rm -f "$CONTEXT_FILE"
+    rm -f "$CONTEXT_FILE" 2>/dev/null
+    clear 2>/dev/null
 }
 trap cleanup EXIT
 
-main "$@"
+main "$@" 2>/dev/null
