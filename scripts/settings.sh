@@ -128,7 +128,8 @@ get_ai_command() {
         codex)
             if command -v codex &>/dev/null; then
                 # Codex CLI: use 'exec' subcommand, reads from stdin
-                echo "codex exec -"
+                # --skip-git-repo-check allows running outside git repos
+                echo "codex exec --skip-git-repo-check -"
             else
                 echo "ERROR: codex not found" >&2
                 return 1
@@ -139,7 +140,7 @@ get_ai_command() {
             if command -v claude &>/dev/null; then
                 echo "claude --print"
             elif command -v codex &>/dev/null; then
-                echo "codex exec -"
+                echo "codex exec --skip-git-repo-check -"
             else
                 echo "ERROR: No AI CLI found (install claude or codex)" >&2
                 return 1
@@ -156,5 +157,24 @@ list_ai_providers() {
     echo "${available[*]}"
 }
 
+# Get the display name of current provider
+get_current_provider_name() {
+    local provider=$(get_setting "ai_provider")
+    
+    case "$provider" in
+        claude) echo "Claude" ;;
+        codex) echo "Codex" ;;
+        auto|*)
+            if command -v claude &>/dev/null; then
+                echo "Claude (auto)"
+            elif command -v codex &>/dev/null; then
+                echo "Codex (auto)"
+            else
+                echo "None"
+            fi
+            ;;
+    esac
+}
+
 # Export for use in other scripts
-export -f init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command list_ai_providers 2>/dev/null || true
+export -f init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command list_ai_providers get_current_provider_name 2>/dev/null || true

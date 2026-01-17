@@ -159,12 +159,13 @@ show_settings() {
 # Main interaction loop
 main() {
     clear
+    local provider_name=$(get_current_provider_name)
     echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Command K${RESET} - AI Command Assistant                            ${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Command K${RESET} - AI Command Assistant              ${DIM}[$provider_name]${RESET} ${BOLD}${CYAN}║${RESET}"
     echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
     echo
     echo -e "${DIM}Commands: [Enter] Send | [Ctrl+C] Cancel | /clear Reset | /insert Last${RESET}"
-    echo -e "${DIM}          /context Show context | /history Conversation | /settings Privacy${RESET}"
+    echo -e "${DIM}          /context Show context | /history Conversation | /settings Settings${RESET}"
     echo
 
     # Show if we have an ongoing conversation
@@ -250,10 +251,11 @@ PROMPT_EOF
         echo "## User: $PROMPT" >> "$FULL_PROMPT"
 
         echo
-        echo -e "${DIM}Thinking...${RESET}"
+        provider_name=$(get_current_provider_name)
+        echo -e "${DIM}Thinking... ($provider_name)${RESET}"
         echo
 
-        # Call Claude Code
+        # Call AI
         AI_CMD=$(get_ai_command)
         if [[ $? -ne 0 ]]; then
             echo -e "${RED}$AI_CMD${RESET}"
@@ -266,16 +268,16 @@ PROMPT_EOF
         rm -f "$FULL_PROMPT"
 
         if [[ $CLAUDE_EXIT -ne 0 ]]; then
-            echo -e "${RED}Error from Claude:${RESET}"
+            echo -e "${RED}Error from $provider_name:${RESET}"
             echo "$RESPONSE"
             echo
             continue
         fi
 
         # Display response
-        echo -e "${BOLD}${GREEN}━━━ Claude ━━━${RESET}"
+        echo -e "${BOLD}${GREEN}━━━ $provider_name ━━━${RESET}"
         echo "$RESPONSE"
-        echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━${RESET}"
+        echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━${RESET}"
         echo
 
         # Save to result file
