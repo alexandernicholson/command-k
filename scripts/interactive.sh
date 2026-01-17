@@ -368,4 +368,4 @@ cleanup() {
 }
 trap cleanup EXIT
 
-main "$@" 2>/dev/null
+main "$@"
