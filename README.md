@@ -2,7 +2,7 @@
 
 Like Cursor's CMD+K, but for your terminal. Get AI-powered command suggestions with full context awareness.
 
-![Command K Demo](demo.gif)
+https://github.com/alexandernicholson/command-k/raw/main/.github/demo.mp4
 
 ## Features
 

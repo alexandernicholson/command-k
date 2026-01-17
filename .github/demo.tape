@@ -1,7 +1,7 @@
 # VHS Demo for Command K
 # https://github.com/charmbracelet/vhs
 
-Output demo.gif
+Output demo.mp4
 Set Shell "bash"
 Set FontSize 16
 Set Width 900
