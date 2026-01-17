@@ -129,7 +129,8 @@ get_ai_command() {
             if command -v codex &>/dev/null; then
                 # Codex CLI: use 'exec' subcommand, reads from stdin
                 # --skip-git-repo-check allows running outside git repos
-                echo "codex exec --skip-git-repo-check -"
+                # -o /dev/stdout outputs only the final message
+                echo "codex exec --skip-git-repo-check -o /dev/stdout -"
             else
                 echo "ERROR: codex not found" >&2
                 return 1
@@ -140,7 +141,7 @@ get_ai_command() {
             if command -v claude &>/dev/null; then
                 echo "claude --print"
             elif command -v codex &>/dev/null; then
-                echo "codex exec --skip-git-repo-check -"
+                echo "codex exec --skip-git-repo-check -o /dev/stdout -"
             else
                 echo "ERROR: No AI CLI found (install claude or codex)" >&2
                 return 1

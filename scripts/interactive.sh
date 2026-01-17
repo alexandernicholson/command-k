@@ -161,8 +161,9 @@ main() {
     clear
     local provider_name=$(get_current_provider_name)
     echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Command K${RESET} - AI Command Assistant              ${DIM}[$provider_name]${RESET} ${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Command K${RESET} - AI Command Assistant                            ${BOLD}${CYAN}║${RESET}"
     echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
+    echo -e "  ${DIM}Provider: ${CYAN}$provider_name${RESET}"
     echo
     echo -e "${DIM}Commands: [Enter] Send | [Ctrl+C] Cancel | /clear Reset | /insert Last${RESET}"
     echo -e "${DIM}          /context Show context | /history Conversation | /settings Settings${RESET}"
