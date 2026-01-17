@@ -1,4 +1,4 @@
-# VHS Demo for Command K - Real functionality
+# VHS Demo for Command K
 # https://github.com/charmbracelet/vhs
 
 Output demo.gif
@@ -10,41 +10,32 @@ Set Padding 10
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 50ms
 
-# Clean start - hide setup
+# Setup - hide hostname by using simple PS1
 Hide
 Type "tmux kill-server 2>/dev/null"
 Enter
-Sleep 300ms
-# Set clean PS1 without hostname
-Type "export PS1='\\[\\033[01;32m\\]\\u\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '"
+Type `export PS1='\u:\w\$ '`
 Enter
-Sleep 200ms
+Sleep 300ms
 Show
 
-# Start tmux with clean status
-Type "tmux new-session -s demo"
+# Start tmux
+Type "tmux"
 Enter
 Sleep 1s
 
-# Set clean prompt inside tmux and hide hostname from status
-Type "export PS1='\\[\\033[01;32m\\]\\u\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '"
+# Set simple prompt in tmux too
+Type `export PS1='\u:\w\$ '`
 Enter
-Type "tmux set status-right ''"
-Enter
-Type "clear"
+Type "cd ~/.tmux/plugins/command-k && clear"
 Enter
 Sleep 500ms
-
-# Go to repo
-Type "cd ~/.tmux/plugins/command-k"
-Enter
-Sleep 300ms
 
 # Trigger Command K (prefix + C-k)
 Ctrl+b
 Ctrl+k
 
-# Wait for popup to appear
+# Wait for popup
 Sleep 2s
 
 # Type the query
@@ -58,16 +49,13 @@ Sleep 14s
 # Insert the result
 Type "i"
 
-# Wait for popup to close and command to be inserted
+# Wait and execute
 Sleep 2s
-
-# Execute the inserted command
 Enter
 
-# Show the beautiful output - give time to appreciate it
+# Show output
 Sleep 8s
 
-# Clean exit
-Type "exit"
-Enter
+# Exit
+Ctrl+d
 Sleep 500ms
