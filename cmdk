@@ -2,7 +2,8 @@
 # Command K - Standalone CLI with Charm TUI
 # Like Cursor's CMD+K, but for any terminal
 
-set -e
+# Don't exit on error - handle errors gracefully
+set +e
 
 # Config
 HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
@@ -95,7 +96,7 @@ get_ai_command() {
             ;;
         codex)
             if command -v codex &>/dev/null; then
-                echo "codex --print"
+                echo "codex -q"
             else
                 echo "ERROR: codex not found" >&2
                 return 1
@@ -105,7 +106,7 @@ get_ai_command() {
             if command -v claude &>/dev/null; then
                 echo "claude --print"
             elif command -v codex &>/dev/null; then
-                echo "codex --print"
+                echo "codex -q"
             else
                 echo "ERROR: No AI CLI found" >&2
                 return 1

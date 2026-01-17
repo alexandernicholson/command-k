@@ -111,6 +111,7 @@ get_all_settings() {
 }
 
 # Get the AI command to use
+# Handles different CLI tools and their flags
 get_ai_command() {
     local provider=$(get_setting "ai_provider")
     
@@ -125,7 +126,8 @@ get_ai_command() {
             ;;
         codex)
             if command -v codex &>/dev/null; then
-                echo "codex --print"
+                # Codex CLI uses -p or --quiet for non-interactive output
+                echo "codex -q"
             else
                 echo "ERROR: codex not found" >&2
                 return 1
@@ -136,7 +138,7 @@ get_ai_command() {
             if command -v claude &>/dev/null; then
                 echo "claude --print"
             elif command -v codex &>/dev/null; then
-                echo "codex --print"
+                echo "codex -q"
             else
                 echo "ERROR: No AI CLI found (install claude or codex)" >&2
                 return 1

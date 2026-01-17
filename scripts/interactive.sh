@@ -2,7 +2,8 @@
 # Interactive Command K popup with follow-up support
 # Compatible with bash 4+ and zsh
 
-set -e
+# Don't exit on error - handle errors gracefully
+set +e
 
 # Config
 HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
