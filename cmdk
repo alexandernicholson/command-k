@@ -5,6 +5,9 @@
 # Don't exit on error - handle errors gracefully
 set +e
 
+# Clean exit on Ctrl+C
+trap 'echo; exit 0' INT TERM
+
 # Config
 HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
 SESSION_TIMEOUT=3600

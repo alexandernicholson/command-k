@@ -18,11 +18,18 @@ PROMPT_HISTORY_FILE="$HISTORY_DIR/prompt_history"
 mkdir -p "$HISTORY_DIR"
 touch "$PROMPT_HISTORY_FILE"
 
-# Load history into readline
-if [[ -f "$PROMPT_HISTORY_FILE" ]]; then
-    history -c  # Clear current history
-    history -r "$PROMPT_HISTORY_FILE"  # Read from file
-fi
+# Set up readline history
+HISTFILE="$PROMPT_HISTORY_FILE"
+HISTSIZE=1000
+HISTFILESIZE=1000
+set -o history  # Enable history
+
+# Load existing history
+history -c  # Clear current session history
+history -r  # Read from HISTFILE
+
+# Clean exit on Ctrl+C
+trap 'echo; exit 0' INT TERM
 
 # Colors
 BOLD='\033[1m'
@@ -196,7 +203,7 @@ main() {
         # Save non-empty, non-command prompts to history
         if [[ -n "$PROMPT" && ! "$PROMPT" =~ ^/ ]]; then
             history -s "$PROMPT"
-            history -a "$PROMPT_HISTORY_FILE"
+            history -a  # Append to HISTFILE
         fi
 
         # Handle commands
