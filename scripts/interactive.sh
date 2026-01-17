@@ -8,6 +8,10 @@ set -e
 HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
 SESSION_TIMEOUT=3600  # 1 hour - start new conversation after this
 
+# Source settings
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/settings.sh"
+
 # Colors
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -58,6 +62,76 @@ show_history() {
     fi
 }
 
+# Privacy settings menu
+show_settings() {
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
+        echo -e "${BOLD}${CYAN}║${RESET}  ${BOLD}Privacy Settings${RESET} - Control what context is sent          ${BOLD}${CYAN}║${RESET}"
+        echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
+        echo
+        echo -e "${DIM}Toggle settings by entering the number. Press 'q' to go back.${RESET}"
+        echo
+        
+        local settings=(
+            "send_terminal_content:Terminal content (last 500 lines)"
+            "send_shell_history:Shell command history"
+            "send_git_status:Git repository status"
+            "send_working_dir:Working directory path"
+            "send_env_var_names:Environment variable names"
+            "send_shell_type:Shell type (bash/zsh/fish)"
+            "send_terminal_size:Terminal dimensions"
+            "send_current_process:Current running process"
+        )
+        
+        local i=1
+        for setting in "${settings[@]}"; do
+            local key="${setting%%:*}"
+            local desc="${setting#*:}"
+            local value=$(get_setting "$key")
+            
+            if [[ "$value" == "true" ]]; then
+                echo -e "  ${GREEN}[$i]${RESET} ${GREEN}✓${RESET} $desc"
+            else
+                echo -e "  ${RED}[$i]${RESET} ${RED}✗${RESET} $desc"
+            fi
+            ((i++))
+        done
+        
+        echo
+        echo -e "  ${DIM}[a] Enable all  [n] Disable all  [q] Back${RESET}"
+        echo
+        echo -n "> "
+        read -r choice
+        
+        case "$choice" in
+            [1-8])
+                local idx=$((choice - 1))
+                local key="${settings[$idx]%%:*}"
+                toggle_setting "$key"
+                ;;
+            a|A)
+                for setting in "${settings[@]}"; do
+                    local key="${setting%%:*}"
+                    set_setting "$key" "true"
+                done
+                ;;
+            n|N)
+                for setting in "${settings[@]}"; do
+                    local key="${setting%%:*}"
+                    set_setting "$key" "false"
+                done
+                ;;
+            q|Q|"")
+                # Refresh context with new settings
+                CONTEXT_FILE=$(mktemp)
+                ~/.tmux/plugins/command-k/scripts/context.sh "$SOURCE_PANE" "$CONTEXT_FILE"
+                return
+                ;;
+        esac
+    done
+}
+
 # Main interaction loop
 main() {
     clear
@@ -66,7 +140,7 @@ main() {
     echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
     echo
     echo -e "${DIM}Commands: [Enter] Send | [Ctrl+C] Cancel | /clear Reset | /insert Last${RESET}"
-    echo -e "${DIM}          /context Show context | /history Show conversation${RESET}"
+    echo -e "${DIM}          /context Show context | /history Conversation | /settings Privacy${RESET}"
     echo
 
     # Show if we have an ongoing conversation
@@ -100,6 +174,11 @@ main() {
             /history)
                 show_history
                 continue
+                ;;
+            /settings)
+                show_settings
+                main  # Restart main to show updated header
+                return
                 ;;
             /insert)
                 if [[ -f "$RESULT_FILE" ]]; then

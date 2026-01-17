@@ -55,6 +55,7 @@ tmux source ~/.tmux.conf
 | `/clear` | Reset conversation history |
 | `/context` | Show captured terminal context |
 | `/history` | Show conversation history |
+| `/settings` | Privacy settings menu |
 | `/insert` | Insert last result |
 | `/quit` | Exit |
 
@@ -80,15 +81,32 @@ set -g @command-k-width '90%'
 set -g @command-k-height '80%'
 ```
 
+## Privacy Controls
+
+Use `/settings` in the popup to control what context is sent to Claude. All settings are persistent.
+
+| Setting | Description |
+|---------|-------------|
+| Terminal content | Last 500 lines of visible output |
+| Shell history | Recent command history |
+| Git status | Branch and modified files |
+| Working directory | Current path |
+| Environment variables | Variable names only (values never sent) |
+| Shell type | bash, zsh, fish, etc. |
+| Terminal size | Dimensions |
+| Current process | Running command |
+
+Settings are stored in `~/.command-k/settings.conf`.
+
 ## How It Works
 
-1. **Captures context** from your current pane:
+1. **Captures context** from your current pane (based on privacy settings):
    - Terminal content (last 500 lines)
    - Working directory
    - Current command/process
    - Git status (if in repo)
+   - Shell type and environment variable names
    - Recent shell history
-   - Detects environment (shell, vim, REPL, SSH, etc.)
 
 2. **Sends to Claude Code** with conversation history for context
 
