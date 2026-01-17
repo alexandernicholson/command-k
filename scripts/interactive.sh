@@ -13,6 +13,17 @@ SESSION_TIMEOUT=3600  # 1 hour - start new conversation after this
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/settings.sh"
 
+# Prompt history for up/down arrow support
+PROMPT_HISTORY_FILE="$HISTORY_DIR/prompt_history"
+mkdir -p "$HISTORY_DIR"
+touch "$PROMPT_HISTORY_FILE"
+
+# Load history into readline
+if [[ -f "$PROMPT_HISTORY_FILE" ]]; then
+    history -c  # Clear current history
+    history -r "$PROMPT_HISTORY_FILE"  # Read from file
+fi
+
 # Colors
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -179,8 +190,14 @@ main() {
 
     while true; do
         echo -e "${BOLD}${YELLOW}What do you need?${RESET}"
-        echo -n "> "
-        read -r PROMPT
+        # Use read -e for readline support (up/down arrow history)
+        read -e -p "> " PROMPT
+        
+        # Save non-empty, non-command prompts to history
+        if [[ -n "$PROMPT" && ! "$PROMPT" =~ ^/ ]]; then
+            history -s "$PROMPT"
+            history -a "$PROMPT_HISTORY_FILE"
+        fi
 
         # Handle commands
         case "$PROMPT" in

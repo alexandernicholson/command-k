@@ -318,18 +318,34 @@ main_loop() {
         # Menu
         local action=$(gum choose \
             "Ask a question" \
+            "Recent prompts" \
             "View context" \
             "Privacy settings" \
             "Clear conversation" \
             "Exit")
         
         case "$action" in
+            "Recent prompts")
+                # Show history and let user pick
+                local hist_file="$HISTORY_DIR/prompt_history"
+                if [[ -f "$hist_file" ]] && [[ -s "$hist_file" ]]; then
+                    local prompt=$(tac "$hist_file" | awk '!seen[$0]++' | head -20 | gum filter --placeholder "Select a previous prompt...")
+                    [[ -z "$prompt" ]] && continue
+                else
+                    gum style --foreground 214 "No prompt history yet"
+                    sleep 1
+                    continue
+                fi
+                ;&  # Fall through to process the prompt
             "Ask a question")
-                # Get the prompt
-                echo ""
-                local prompt=$(gum input --placeholder "What do you need?" --width 60 --char-limit 500)
-                
-                [[ -z "$prompt" ]] && continue
+                # Get the prompt if not from history
+                if [[ -z "${prompt:-}" ]]; then
+                    echo ""
+                    prompt=$(gum input --placeholder "What do you need?" --width 60 --char-limit 500)
+                    [[ -z "$prompt" ]] && continue
+                    # Save to history
+                    echo "$prompt" >> "$HISTORY_DIR/prompt_history"
+                fi
                 
                 # Build full prompt with context
                 local full_prompt=$(mktemp)
