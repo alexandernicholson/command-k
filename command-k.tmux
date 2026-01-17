@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Command K - tmux plugin for AI-assisted command completion
+# Compatible with bash and zsh
 # 
 # Usage: Add to ~/.tmux.conf:
 #   run-shell ~/.tmux/plugins/command-k/command-k.tmux

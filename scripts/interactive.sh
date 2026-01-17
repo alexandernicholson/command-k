@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Interactive Command K popup with follow-up support
+# Compatible with bash 4+ and zsh
 
 set -e
 

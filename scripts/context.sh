@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Gather context from current tmux pane
+# Compatible with bash 4+ and zsh
 
 PANE_ID="${1:-}"
 CONTEXT_FILE="${2:-/tmp/command-k-context.txt}"
@@ -38,11 +39,19 @@ case "$PANE_CMD" in
 esac
 
 # Get recent shell history if available
+# Detect user's shell and read appropriate history
 SHELL_HISTORY=""
-if [[ -f ~/.bash_history ]]; then
+USER_SHELL=$(basename "$SHELL" 2>/dev/null)
+
+if [[ "$USER_SHELL" == "zsh" ]] && [[ -f ~/.zsh_history ]]; then
+    # zsh extended history format: `: timestamp:0;command` or just `command`
+    SHELL_HISTORY=$(tail -30 ~/.zsh_history 2>/dev/null | sed 's/^: [0-9]*:[0-9]*;//' | tail -20)
+elif [[ "$USER_SHELL" == "zsh" ]] && [[ -f ~/.histfile ]]; then
+    SHELL_HISTORY=$(tail -30 ~/.histfile 2>/dev/null | sed 's/^: [0-9]*:[0-9]*;//' | tail -20)
+elif [[ -f ~/.bash_history ]]; then
     SHELL_HISTORY=$(tail -20 ~/.bash_history 2>/dev/null)
 elif [[ -f ~/.zsh_history ]]; then
-    SHELL_HISTORY=$(tail -20 ~/.zsh_history 2>/dev/null | sed 's/^[^;]*;//')
+    SHELL_HISTORY=$(tail -30 ~/.zsh_history 2>/dev/null | sed 's/^: [0-9]*:[0-9]*;//' | tail -20)
 fi
 
 # Get git info if in a repo
