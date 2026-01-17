@@ -33,7 +33,7 @@ export COMMAND_K_HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
 
 # Bind the key
 # We pass the current pane ID to the script via environment variable
-tmux bind-key "$KEY" run-shell -b "tmux display-popup -E -w '$POPUP_WIDTH' -h '$POPUP_HEIGHT' -e COMMAND_K_SOURCE_PANE='#{pane_id}' '$CURRENT_DIR/scripts/interactive.sh'"
+tmux bind-key "$KEY" run-shell -b "tmux display-popup -E -w '$POPUP_WIDTH' -h '$POPUP_HEIGHT' -e COMMAND_K_SOURCE_PANE='#{pane_id}' '$CURRENT_DIR/scripts/popup-wrapper.sh'"
 
 # Also bind without prefix for quick access (optional, commented by default)
 # Uncomment to enable: tmux bind-key -n M-k ...
