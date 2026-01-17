@@ -14,22 +14,31 @@ Set TypingSpeed 50ms
 Hide
 Type "tmux kill-server 2>/dev/null"
 Enter
-Type "source ~/.ssh/agent.env 2>/dev/null"
+Sleep 300ms
+# Set clean PS1 without hostname
+Type "export PS1='\\[\\033[01;32m\\]\\u\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '"
 Enter
-Type "export GIT_SSH_COMMAND='ssh -o BatchMode=yes'"
-Enter
-Sleep 500ms
+Sleep 200ms
 Show
 
-# Start directly in tmux
-Type "tmux"
+# Start tmux with clean status
+Type "tmux new-session -s demo"
 Enter
 Sleep 1s
 
-# Go to repo and clear
-Type "cd ~/.tmux/plugins/command-k && clear"
+# Set clean prompt inside tmux and hide hostname from status
+Type "export PS1='\\[\\033[01;32m\\]\\u\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '"
+Enter
+Type "tmux set status-right ''"
+Enter
+Type "clear"
 Enter
 Sleep 500ms
+
+# Go to repo
+Type "cd ~/.tmux/plugins/command-k"
+Enter
+Sleep 300ms
 
 # Trigger Command K (prefix + C-k)
 Ctrl+b
@@ -43,7 +52,7 @@ Type "git log with colors, graph, oneline, all branches"
 Sleep 500ms
 Enter
 
-# Wait for Claude response
+# Wait for AI response
 Sleep 14s
 
 # Insert the result
@@ -59,5 +68,6 @@ Enter
 Sleep 8s
 
 # Clean exit
-Ctrl+d
+Type "exit"
+Enter
 Sleep 500ms
