@@ -314,8 +314,8 @@ PROMPT_EOF
                 # Action menu
                 echo ""
                 local result_action=$(gum choose \
-                    "Copy to clipboard" \
                     "Run command" \
+                    "Copy to clipboard" \
                     "Ask follow-up" \
                     "Back to menu")
                 
@@ -362,6 +362,12 @@ PROMPT_EOF
     done
 }
 
+# Check for piped input
+PIPED_INPUT=""
+if [[ ! -t 0 ]]; then
+    PIPED_INPUT=$(cat)
+fi
+
 # Parse arguments
 case "${1:-}" in
     -h|--help)
@@ -380,6 +386,8 @@ Examples:
   cmdk                           # Interactive TUI
   cmdk -q "list large files"     # Quick query
   cmdk --settings                # Configure privacy
+  echo "list files" | cmdk       # Piped query
+  cat prompt.txt | cmdk          # Query from file
 EOF
         exit 0
         ;;
@@ -415,6 +423,29 @@ User: $query"
         exit 0
         ;;
     "")
+        # Check if we have piped input
+        if [[ -n "$PIPED_INPUT" ]]; then
+            check_deps
+            init_settings
+            
+            # Quick query mode with piped input
+            context=$(gather_context)
+            prompt="You are a terminal command assistant. Output ONLY the exact command.
+
+CRITICAL RULES:
+- Output ONLY the command itself - no shell prompts, no \$, no explanation
+- No markdown code blocks - just the raw command
+- Single command only (use && or ; for multiple)
+
+$context
+
+User: $PIPED_INPUT"
+            
+            response=$(echo "$prompt" | claude --print 2>&1)
+            echo "$response"
+            exit 0
+        fi
+        
         check_deps
         main_loop
         ;;
