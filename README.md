@@ -37,11 +37,33 @@ tmux source ~/.tmux.conf
 
 ## Requirements
 
-- tmux 3.2+ (for `display-popup`)
 - [Claude Code CLI](https://github.com/anthropics/claude-code) (`claude` command in PATH)
-- bash 4+
+- bash 4+ or zsh
+- **For tmux plugin:** tmux 3.2+ (for `display-popup`)
+- **For standalone CLI:** [gum](https://github.com/charmbracelet/gum)
 
 ## Usage
+
+### Standalone CLI (no tmux required)
+
+```bash
+# Add to your PATH
+ln -s ~/.tmux/plugins/command-k/cmdk ~/.local/bin/cmdk
+
+# Interactive TUI
+cmdk
+
+# Quick query (outputs command directly)
+cmdk -q "find files larger than 100MB"
+
+# View current context
+cmdk -c
+
+# Privacy settings
+cmdk -s
+```
+
+### tmux Plugin
 
 1. Press `prefix + Ctrl-k` (default: `C-b C-k`)
 2. Type what you need: "git command to undo last commit"

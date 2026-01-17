@@ -1,0 +1,426 @@
+#!/usr/bin/env bash
+# Command K - Standalone CLI with Charm TUI
+# Like Cursor's CMD+K, but for any terminal
+
+set -e
+
+# Config
+HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
+SESSION_TIMEOUT=3600
+
+# Script directory for sourcing settings
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source settings if available
+if [[ -f "$SCRIPT_DIR/scripts/settings.sh" ]]; then
+    source "$SCRIPT_DIR/scripts/settings.sh"
+else
+    # Inline minimal settings functions if not found
+    SETTINGS_FILE="$HISTORY_DIR/settings.conf"
+    get_setting() {
+        local key="$1"
+        grep "^${key}=" "$SETTINGS_FILE" 2>/dev/null | cut -d= -f2 | tr -d ' ' || echo "true"
+    }
+    set_setting() {
+        local key="$1" value="$2"
+        mkdir -p "$(dirname "$SETTINGS_FILE")"
+        if grep -q "^${key}=" "$SETTINGS_FILE" 2>/dev/null; then
+            sed -i "s/^${key}=.*/${key}=${value}/" "$SETTINGS_FILE"
+        else
+            echo "${key}=${value}" >> "$SETTINGS_FILE"
+        fi
+    }
+    init_settings() {
+        mkdir -p "$HISTORY_DIR"
+        [[ -f "$SETTINGS_FILE" ]] || cat > "$SETTINGS_FILE" << 'EOF'
+send_terminal_content=true
+send_shell_history=true
+send_git_status=true
+send_working_dir=true
+send_env_var_names=true
+send_shell_type=true
+send_terminal_size=true
+send_current_process=true
+EOF
+    }
+fi
+
+mkdir -p "$HISTORY_DIR"
+
+# Session file (use current directory hash for persistence)
+DIR_HASH=$(echo "$PWD" | md5sum | cut -c1-8)
+SESSION_FILE="$HISTORY_DIR/cli-session-$DIR_HASH.md"
+RESULT_FILE="$HISTORY_DIR/last-result.txt"
+
+# Check for stale session
+if [[ -f "$SESSION_FILE" ]]; then
+    LAST_MOD=$(stat -c %Y "$SESSION_FILE" 2>/dev/null || stat -f %m "$SESSION_FILE" 2>/dev/null || echo 0)
+    NOW=$(date +%s)
+    if (( NOW - LAST_MOD > SESSION_TIMEOUT )); then
+        rm -f "$SESSION_FILE"
+    fi
+fi
+
+# Check for required tools
+check_deps() {
+    local missing=()
+    command -v gum &>/dev/null || missing+=("gum")
+    command -v claude &>/dev/null || missing+=("claude")
+    
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "Missing required tools: ${missing[*]}"
+        echo "Install gum: https://github.com/charmbracelet/gum"
+        echo "Install claude: https://github.com/anthropics/claude-code"
+        exit 1
+    fi
+}
+
+# Helper to check if setting is enabled
+is_enabled() {
+    [[ "$(get_setting "$1")" == "true" ]]
+}
+
+# Gather context
+gather_context() {
+    init_settings
+    
+    local context=""
+    
+    context+="## Terminal Context\n\n"
+    
+    if is_enabled "send_shell_type"; then
+        context+="**Shell:** $(basename "$SHELL")\n"
+    fi
+    
+    if is_enabled "send_working_dir"; then
+        context+="**Working Directory:** $PWD\n"
+    fi
+    
+    if is_enabled "send_terminal_size"; then
+        context+="**Terminal Size:** $(tput cols)x$(tput lines)\n"
+    fi
+    
+    if is_enabled "send_env_var_names"; then
+        context+="\n### Environment Variables (names only)\n\`\`\`\n"
+        context+="$(env | cut -d= -f1 | sort | tr '\n' ' ')\n"
+        context+="\`\`\`\n"
+    fi
+    
+    if is_enabled "send_git_status"; then
+        if git rev-parse --git-dir &>/dev/null 2>&1; then
+            local branch=$(git branch --show-current 2>/dev/null)
+            local status=$(git status --short 2>/dev/null | head -10)
+            context+="\n### Git Status\n"
+            context+="Branch: $branch\n"
+            context+="Modified files:\n$status\n"
+        fi
+    fi
+    
+    if is_enabled "send_shell_history"; then
+        context+="\n### Recent Shell History\n\`\`\`\n"
+        if [[ -f ~/.zsh_history ]]; then
+            context+="$(tail -20 ~/.zsh_history 2>/dev/null | sed 's/^: [0-9]*:[0-9]*;//')\n"
+        elif [[ -f ~/.bash_history ]]; then
+            context+="$(tail -20 ~/.bash_history 2>/dev/null)\n"
+        fi
+        context+="\`\`\`\n"
+    fi
+    
+    echo -e "$context"
+}
+
+# Settings menu
+show_settings() {
+    init_settings
+    
+    while true; do
+        gum style --border double --padding "1 2" --border-foreground 212 \
+            "$(gum style --bold --foreground 212 'Privacy Settings')" \
+            "" \
+            "Control what context is sent to Claude"
+        
+        echo ""
+        
+        local settings=(
+            "send_terminal_content:Terminal content"
+            "send_shell_history:Shell command history"
+            "send_git_status:Git repository status"
+            "send_working_dir:Working directory path"
+            "send_env_var_names:Environment variable names"
+            "send_shell_type:Shell type"
+            "send_terminal_size:Terminal dimensions"
+            "send_current_process:Current running process"
+        )
+        
+        local items=()
+        for setting in "${settings[@]}"; do
+            local key="${setting%%:*}"
+            local desc="${setting#*:}"
+            local value=$(get_setting "$key")
+            if [[ "$value" == "true" ]]; then
+                items+=("✓ $desc")
+            else
+                items+=("✗ $desc")
+            fi
+        done
+        items+=("─────────────")
+        items+=("Enable all")
+        items+=("Disable all")
+        items+=("← Back")
+        
+        local choice=$(printf '%s\n' "${items[@]}" | gum choose --height 15)
+        
+        case "$choice" in
+            "← Back"|"") return ;;
+            "─────────────") continue ;;
+            "Enable all")
+                for setting in "${settings[@]}"; do
+                    set_setting "${setting%%:*}" "true"
+                done
+                ;;
+            "Disable all")
+                for setting in "${settings[@]}"; do
+                    set_setting "${setting%%:*}" "false"
+                done
+                ;;
+            *)
+                # Toggle the selected setting
+                local idx=0
+                for setting in "${settings[@]}"; do
+                    local desc="${setting#*:}"
+                    if [[ "$choice" == *"$desc"* ]]; then
+                        local key="${setting%%:*}"
+                        local current=$(get_setting "$key")
+                        if [[ "$current" == "true" ]]; then
+                            set_setting "$key" "false"
+                        else
+                            set_setting "$key" "true"
+                        fi
+                        break
+                    fi
+                    ((idx++))
+                done
+                ;;
+        esac
+        clear
+    done
+}
+
+# Show context
+show_context() {
+    gum style --border rounded --padding "1 2" --border-foreground 240 \
+        "$(gum style --bold 'Current Context')" \
+        "" \
+        "$(gather_context)"
+    echo ""
+    gum input --placeholder "Press Enter to continue..."
+}
+
+# Main chat loop
+main_loop() {
+    local follow_up=false
+    
+    while true; do
+        clear
+        
+        # Header
+        gum style --border double --padding "1 2" --border-foreground 212 \
+            "$(gum style --bold --foreground 212 '⌘K Command K')" \
+            "" \
+            "AI-powered command assistance"
+        
+        echo ""
+        
+        # Show conversation status
+        if [[ -f "$SESSION_FILE" ]]; then
+            local turns=$(grep -c "^## User:" "$SESSION_FILE" 2>/dev/null || echo 0)
+            gum style --foreground 70 "↪ Continuing conversation ($turns previous turns)"
+            echo ""
+        fi
+        
+        # Menu
+        local action=$(gum choose \
+            "Ask a question" \
+            "View context" \
+            "Privacy settings" \
+            "Clear conversation" \
+            "Exit")
+        
+        case "$action" in
+            "Ask a question")
+                # Get the prompt
+                echo ""
+                local prompt=$(gum input --placeholder "What do you need?" --width 60 --char-limit 500)
+                
+                [[ -z "$prompt" ]] && continue
+                
+                # Build full prompt with context
+                local full_prompt=$(mktemp)
+                cat > "$full_prompt" << PROMPT_EOF
+You are a terminal command assistant. Output ONLY the exact command to run.
+
+CRITICAL RULES:
+- Output ONLY the command itself - no shell prompts, no \$, no explanation
+- No markdown code blocks - just the raw command
+- No "Here's the command:" or similar prefixes
+- Single command only (use && or ; for multiple)
+- If asked for explanation, then explain - otherwise just the command
+
+$(gather_context)
+PROMPT_EOF
+
+                # Add conversation history
+                if [[ -f "$SESSION_FILE" ]]; then
+                    echo "" >> "$full_prompt"
+                    echo "## Previous Conversation:" >> "$full_prompt"
+                    cat "$SESSION_FILE" >> "$full_prompt"
+                fi
+                
+                echo "" >> "$full_prompt"
+                echo "## User: $prompt" >> "$full_prompt"
+                
+                # Call Claude with spinner
+                echo ""
+                local response
+                response=$(gum spin --spinner dot --title "Thinking..." -- \
+                    bash -c "cat '$full_prompt' | claude --print 2>&1")
+                local exit_code=$?
+                
+                rm -f "$full_prompt"
+                
+                if [[ $exit_code -ne 0 ]]; then
+                    gum style --foreground 196 "Error: $response"
+                    gum input --placeholder "Press Enter to continue..."
+                    continue
+                fi
+                
+                # Display response
+                echo ""
+                gum style --border rounded --padding "1 2" --border-foreground 70 \
+                    "$(gum style --bold --foreground 70 'Response')" \
+                    "" \
+                    "$response"
+                
+                # Save result
+                echo "$response" > "$RESULT_FILE"
+                
+                # Save to session
+                echo "## User: $prompt" >> "$SESSION_FILE"
+                echo "" >> "$SESSION_FILE"
+                echo "## Assistant:" >> "$SESSION_FILE"
+                echo "$response" >> "$SESSION_FILE"
+                echo "" >> "$SESSION_FILE"
+                
+                # Action menu
+                echo ""
+                local result_action=$(gum choose \
+                    "Copy to clipboard" \
+                    "Run command" \
+                    "Ask follow-up" \
+                    "Back to menu")
+                
+                case "$result_action" in
+                    "Copy to clipboard")
+                        echo "$response" | xclip -selection clipboard 2>/dev/null || \
+                        echo "$response" | pbcopy 2>/dev/null || \
+                        echo "$response" | xsel --clipboard 2>/dev/null || \
+                        gum style --foreground 196 "Clipboard not available"
+                        gum style --foreground 70 "✓ Copied!"
+                        sleep 1
+                        ;;
+                    "Run command")
+                        echo ""
+                        gum style --foreground 214 "Running: $response"
+                        echo ""
+                        eval "$response"
+                        echo ""
+                        gum input --placeholder "Press Enter to continue..."
+                        ;;
+                    "Ask follow-up")
+                        continue
+                        ;;
+                esac
+                ;;
+            "View context")
+                clear
+                show_context
+                ;;
+            "Privacy settings")
+                clear
+                show_settings
+                ;;
+            "Clear conversation")
+                rm -f "$SESSION_FILE"
+                gum style --foreground 70 "✓ Conversation cleared"
+                sleep 1
+                ;;
+            "Exit"|"")
+                clear
+                exit 0
+                ;;
+        esac
+    done
+}
+
+# Parse arguments
+case "${1:-}" in
+    -h|--help)
+        cat << 'EOF'
+Command K - AI Command Assistant
+
+Usage: cmdk [options]
+
+Options:
+  -h, --help      Show this help
+  -s, --settings  Open privacy settings
+  -c, --context   Show current context
+  -q, --query     Direct query mode (non-interactive)
+  
+Examples:
+  cmdk                           # Interactive TUI
+  cmdk -q "list large files"     # Quick query
+  cmdk --settings                # Configure privacy
+EOF
+        exit 0
+        ;;
+    -s|--settings)
+        check_deps
+        show_settings
+        exit 0
+        ;;
+    -c|--context)
+        init_settings
+        gather_context
+        exit 0
+        ;;
+    -q|--query)
+        check_deps
+        shift
+        query="$*"
+        if [[ -z "$query" ]]; then
+            echo "Usage: cmdk -q \"your question\""
+            exit 1
+        fi
+        
+        # Quick query mode
+        context=$(gather_context)
+        prompt="You are a terminal command assistant. Output ONLY the exact command.
+
+$context
+
+User: $query"
+        
+        response=$(echo "$prompt" | claude --print 2>&1)
+        echo "$response"
+        exit 0
+        ;;
+    "")
+        check_deps
+        main_loop
+        ;;
+    *)
+        echo "Unknown option: $1"
+        echo "Use -h for help"
+        exit 1
+        ;;
+esac
