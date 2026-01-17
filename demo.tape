@@ -3,68 +3,71 @@
 
 Output demo.gif
 Set Shell "bash"
-Set FontSize 14
-Set Width 1200
-Set Height 700
-Set Padding 20
-Set Theme "Dracula"
+Set FontSize 16
+Set Width 900
+Set Height 500
+Set Padding 15
+Set Theme "Catppuccin Mocha"
 
-# Start fresh
-Type "cd ~/projects/myapp"
-Enter
-Sleep 500ms
-
-Type "git status"
-Enter
-Sleep 1s
-
-# Show we're in a git repo with changes
-Type "# I need to undo my last commit but keep the changes..."
-Enter
-Sleep 1s
-
-# Simulate the Command K popup
-# Since we can't actually run the interactive popup in vhs,
-# we'll show the concept with a simpler demo
-Type "# Let me ask Command K!"
-Enter
-Sleep 500ms
-
-# Show a mock of what the interaction looks like
-Type "echo '╔══════════════════════════════════════════════════════════════╗'"
-Enter
-Type "echo '║  Command K - AI Command Assistant                            ║'"
-Enter
-Type "echo '╚══════════════════════════════════════════════════════════════╝'"
-Enter
-Sleep 500ms
-
-Type "echo 'What do you need?'"
-Enter
-Type "echo '> git command to undo last commit but keep changes'"
+# Start in a project directory
+Type "cd ~/projects/api && git status"
 Enter
 Sleep 1.5s
 
-Type "echo ''"
-Enter
-Type "echo '━━━ Claude ━━━'"
-Enter
-Type "echo 'git reset --soft HEAD~1'"
-Enter
-Type "echo '━━━━━━━━━━━━━━'"
+Type "# Hmm, I need to undo my last commit..."
 Enter
 Sleep 1s
 
-Type "echo '[i]nsert to terminal | [c]opy | [f]ollow up | [q]uit'"
+Type "# Let me use Command K! (prefix + Ctrl-k)"
 Enter
-Sleep 500ms
+Sleep 1.5s
 
-# Show the result being used
-Type "echo 'Pressed: i'"
+# Simulate the popup appearance
+Type "clear"
+Enter
+Sleep 300ms
+
+# Show a cleaner mock of the UI
+Type "cat << 'EOF'"
+Enter
+Type "╭──────────────────────────────────────────────────╮"
+Enter
+Type "│  ⌘K  Command K                                   │"
+Enter
+Type "╰──────────────────────────────────────────────────╯"
+Enter
+Type ""
+Enter
+Type "What do you need?"
+Enter
+Type "> undo last commit but keep changes"
+Enter
+Type ""
+Enter
+Type "Thinking..."
+Enter
+Type ""
+Enter
+Type "━━━ Response ━━━"
+Enter
+Type "git reset --soft HEAD~1"
+Enter
+Type "━━━━━━━━━━━━━━━━━"
+Enter
+Type ""
+Enter
+Type "[i]nsert  [c]opy  [f]ollow-up  [q]uit"
+Enter
+Type "EOF"
+Enter
+Sleep 2s
+
+Type "# Pressed 'i' - command inserted!"
 Enter
 Sleep 500ms
 
 Type "git reset --soft HEAD~1"
+Sleep 1s
 Enter
 Sleep 1s
 
