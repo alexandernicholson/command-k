@@ -18,15 +18,16 @@ PROMPT_HISTORY_FILE="$HISTORY_DIR/prompt_history"
 mkdir -p "$HISTORY_DIR"
 touch "$PROMPT_HISTORY_FILE"
 
-# Set up readline history
-HISTFILE="$PROMPT_HISTORY_FILE"
-HISTSIZE=1000
-HISTFILESIZE=1000
-set -o history  # Enable history
+# Disable normal bash history (we don't want shell commands)
+set +o history
+unset HISTFILE
 
-# Load existing history
-history -c  # Clear current session history
-history -r  # Read from HISTFILE
+# Load ONLY our prompt history into readline
+HISTSIZE=1000
+history -c  # Clear any existing history
+while IFS= read -r line; do
+    [[ -n "$line" ]] && history -s "$line"
+done < "$PROMPT_HISTORY_FILE"
 
 # Clean exit on Ctrl+C
 trap 'echo; exit 0' INT TERM
@@ -202,8 +203,8 @@ main() {
         
         # Save non-empty, non-command prompts to history
         if [[ -n "$PROMPT" && ! "$PROMPT" =~ ^/ ]]; then
-            history -s "$PROMPT"
-            history -a  # Append to HISTFILE
+            history -s "$PROMPT"  # Add to readline history
+            echo "$PROMPT" >> "$PROMPT_HISTORY_FILE"  # Persist to file
         fi
 
         # Handle commands
