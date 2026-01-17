@@ -122,15 +122,16 @@ main() {
         FULL_PROMPT=$(mktemp)
         
         cat > "$FULL_PROMPT" << PROMPT_EOF
-You are helping a user in their terminal. They will ask for commands, code snippets, or explanations.
+You are a terminal command assistant. Output ONLY the exact command to run.
 
-RULES:
-- For commands/code: Output ONLY the command or code, no explanations unless asked
-- Be concise and precise
-- If multiple options exist, give the most common/safest one
-- For dangerous operations, include a brief warning
-- Match the user's context (shell, editor, etc.)
+CRITICAL RULES:
+- Output ONLY the command itself - no shell prompts, no \$, no explanation
+- No markdown code blocks - just the raw command
+- No "Here's the command:" or similar prefixes
+- Single command only (use && or ; for multiple)
+- If asked for explanation, then explain - otherwise just the command
 
+Context from user's terminal:
 $(cat "$CONTEXT_FILE")
 
 PROMPT_EOF
@@ -217,11 +218,12 @@ insert_result() {
         return 1
     fi
 
-    RESULT=$(cat "$RESULT_FILE")
+    # Read result and strip trailing whitespace/newlines
+    RESULT=$(cat "$RESULT_FILE" | tr -d '\r' | sed 's/[[:space:]]*$//')
     
-    # Escape special characters for tmux send-keys
-    # Send the result to the source pane
-    tmux send-keys -t "$SOURCE_PANE" "$RESULT"
+    # Use -l flag for literal input (no special key interpretation)
+    # This prevents tmux from interpreting characters like Enter, Tab, etc.
+    tmux send-keys -t "$SOURCE_PANE" -l "$RESULT"
     
     echo -e "${GREEN}✓ Inserted to terminal${RESET}"
     sleep 0.3
