@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Mock AI CLI for testing
+# Returns predictable commands based on input keywords
+
+# Read input from stdin
+INPUT=$(cat)
+
+# Return appropriate test commands based on keywords
+if echo "$INPUT" | grep -qi "list\|ls\|files"; then
+    echo "ls -la"
+elif echo "$INPUT" | grep -qi "git\|log\|commit"; then
+    echo "git log --oneline -10"
+elif echo "$INPUT" | grep -qi "disk\|space\|size"; then
+    echo "df -h"
+elif echo "$INPUT" | grep -qi "process\|ps\|running"; then
+    echo "ps aux | head -20"
+elif echo "$INPUT" | grep -qi "network\|ip\|inet"; then
+    echo "ip addr show"
+elif echo "$INPUT" | grep -qi "date\|time\|now"; then
+    echo "date"
+else
+    # Default test command
+    echo "echo 'test command executed'"
+fi

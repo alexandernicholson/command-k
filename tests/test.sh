@@ -117,6 +117,45 @@ command -v claude &>/dev/null && pass "claude CLI is installed" || echo -e "${YE
 command -v codex &>/dev/null && pass "codex CLI is installed" || echo -e "${YELLOW}!${NC} codex CLI not found"
 command -v gum &>/dev/null && pass "gum is installed (for cmdk)" || echo -e "${YELLOW}!${NC} gum not found (needed for cmdk standalone)"
 
+section "Mock AI Provider"
+
+# Test mock-ai script exists and is executable
+if [[ -x "$SCRIPT_DIR/tests/mock-ai" ]]; then
+    pass "mock-ai is executable"
+else
+    fail "mock-ai is not executable"
+fi
+
+# Test mock-ai returns expected output
+MOCK_RESPONSE=$(echo "list files" | "$SCRIPT_DIR/tests/mock-ai")
+if [[ "$MOCK_RESPONSE" == "ls -la" ]]; then
+    pass "mock-ai returns expected command for 'list files'"
+else
+    fail "mock-ai returned unexpected: $MOCK_RESPONSE"
+fi
+
+# Test mock provider setting
+ORIG_PROVIDER=$(get_setting "ai_provider")
+set_setting "ai_provider" "mock"
+
+MOCK_CMD=$(get_ai_command 2>/dev/null)
+if [[ "$MOCK_CMD" == *"mock-ai"* ]]; then
+    pass "get_ai_command returns mock-ai path"
+else
+    fail "get_ai_command with mock provider returned: $MOCK_CMD"
+fi
+
+# Test full flow with mock provider
+MOCK_RESULT=$(echo "show disk space" | run_ai_query 2>/dev/null)
+if [[ "$MOCK_RESULT" == "df -h" ]]; then
+    pass "run_ai_query with mock returns correct command"
+else
+    fail "run_ai_query with mock returned: $MOCK_RESULT"
+fi
+
+# Restore original provider
+set_setting "ai_provider" "$ORIG_PROVIDER"
+
 section "Insert Function"
 
 # Test the send-keys command format (without actually sending)

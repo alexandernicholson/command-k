@@ -133,6 +133,17 @@ get_ai_command() {
                 return 1
             fi
             ;;
+        mock)
+            # Internal testing provider - not shown in UI
+            local script_dir="${BASH_SOURCE[0]%/*}"
+            local mock_cli="$script_dir/../tests/mock-ai"
+            if [[ -x "$mock_cli" ]]; then
+                echo "$mock_cli"
+            else
+                echo "ERROR: mock-ai not found" >&2
+                return 1
+            fi
+            ;;
         auto|*)
             if command -v claude &>/dev/null; then
                 echo "claude --print"
@@ -187,6 +198,7 @@ get_current_provider_name() {
     case "$provider" in
         claude) echo "Claude" ;;
         codex) echo "Codex" ;;
+        mock) echo "Mock (test)" ;;
         auto|*)
             if command -v claude &>/dev/null; then
                 echo "Claude (auto)"

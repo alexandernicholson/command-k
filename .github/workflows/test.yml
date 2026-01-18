@@ -29,6 +29,7 @@ jobs:
           chmod +x scripts/*.sh
           chmod +x cmdk
           chmod +x tests/test.sh
+          chmod +x tests/mock-ai
 
       - name: Start tmux server
         run: |
