@@ -14,6 +14,21 @@ Like Cursor's CMD+K, but for your terminal and Neovim. Get AI-powered command an
 - **Preview first**: See the suggestion before inserting
 - **Smart detection**: Knows if you're in vim, a REPL, SSH session, etc.
 
+## Variants
+
+Command K comes in two flavors — choose based on your workflow:
+
+| Variant | Best For | Dependencies |
+|---------|----------|--------------|
+| **tmux plugin** | tmux users who want `⌘K` in a popup without leaving their session | tmux 3.2+, gum |
+| **Standalone CLI** | Anyone who wants AI command help in any terminal | gum (bash) or Rust (cmdk-rs) |
+
+**tmux plugin** — Binds to `prefix + Ctrl-k`, opens in a tmux popup, can insert commands directly into your pane. Context is captured from the active pane.
+
+**Standalone CLI** — Run `cmdk` (bash) or `cmdk-rs` (Rust) from any terminal. Same features, but you copy/paste the result yourself. The Rust version is faster and also powers the Neovim plugin.
+
+Both share the same configuration (`~/.command-k/`) and conversation history.
+
 ## Installation
 
 ### With TPM (recommended)
