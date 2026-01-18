@@ -312,54 +312,53 @@ PROMPT_EOF
         echo "$RESPONSE" >> "$SESSION_FILE"
         echo "" >> "$SESSION_FILE"
 
-        # Ask what to do
-        echo -e "${YELLOW}[i]nsert to terminal | [c]opy to clipboard | [f]ollow up | [q]uit${RESET}"
-        echo -n "> "
-        read -r -n 1 ACTION
-        echo
+        # Action menu loop - stays here until success or explicit exit
+        while true; do
+            echo -e "${YELLOW}[i]nsert to terminal | [c]opy to clipboard | [f]ollow up | [q]uit${RESET}"
+            echo -n "> "
+            read -r -n 1 ACTION
+            echo
 
-        case "$ACTION" in
-            i|I)
-                if insert_result; then
+            case "$ACTION" in
+                i|I)
+                    if insert_result; then
+                        exit 0
+                    else
+                        echo -e "${RED}Insert failed - choose another option${RESET}"
+                        echo
+                    fi
+                    ;;
+                c|C)
+                    if echo "$RESPONSE" | xclip -selection clipboard 2>/dev/null; then
+                        echo -e "${GREEN}✓ Copied to clipboard${RESET}"
+                        sleep 0.5
+                        exit 0
+                    elif echo "$RESPONSE" | pbcopy 2>/dev/null; then
+                        echo -e "${GREEN}✓ Copied to clipboard${RESET}"
+                        sleep 0.5
+                        exit 0
+                    elif echo "$RESPONSE" | xsel --clipboard 2>/dev/null; then
+                        echo -e "${GREEN}✓ Copied to clipboard${RESET}"
+                        sleep 0.5
+                        exit 0
+                    else
+                        echo -e "${RED}Clipboard not available (no xclip, pbcopy, or xsel)${RESET}"
+                        echo -e "${DIM}You can manually copy the command above${RESET}"
+                        echo
+                    fi
+                    ;;
+                f|F)
+                    # Break out of action loop, continue to prompt loop
+                    break
+                    ;;
+                q|Q|$'\e')
                     exit 0
-                else
-                    echo -e "${RED}Insert failed - choose another option${RESET}"
-                    echo
-                    continue
-                fi
-                ;;
-            c|C)
-                if echo "$RESPONSE" | xclip -selection clipboard 2>/dev/null; then
-                    echo -e "${GREEN}✓ Copied to clipboard${RESET}"
-                    sleep 0.5
-                    exit 0
-                elif echo "$RESPONSE" | pbcopy 2>/dev/null; then
-                    echo -e "${GREEN}✓ Copied to clipboard${RESET}"
-                    sleep 0.5
-                    exit 0
-                elif echo "$RESPONSE" | xsel --clipboard 2>/dev/null; then
-                    echo -e "${GREEN}✓ Copied to clipboard${RESET}"
-                    sleep 0.5
-                    exit 0
-                else
-                    echo -e "${RED}Clipboard not available (no xclip, pbcopy, or xsel)${RESET}"
-                    echo -e "${DIM}You can manually copy the command above${RESET}"
-                    echo
-                    continue
-                fi
-                ;;
-            f|F)
-                echo
-                continue
-                ;;
-            q|Q|$'\e')
-                exit 0
-                ;;
-            *)
-                echo
-                continue
-                ;;
-        esac
+                    ;;
+                *)
+                    # Invalid key - just re-show menu
+                    ;;
+            esac
+        done
     done
 }
 
