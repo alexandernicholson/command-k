@@ -1,5 +1,8 @@
 # Command K - AI Command Assistant for tmux
 
+![IMG_6824](https://github.com/user-attachments/assets/ee82b449-47c9-46d8-a534-5c8f335c955d)
+
+
 Like Cursor's CMD+K, but for your terminal. Get AI-powered command suggestions with full context awareness.
 
 ![Command K Demo](https://vhs.charm.sh/vhs-Dc6dHb2teLwxP3l0nnyq6.gif)
