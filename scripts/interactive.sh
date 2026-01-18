@@ -26,8 +26,9 @@ unset HISTFILE
 HISTSIZE=1000
 history -c  # Clear any existing history
 while IFS= read -r line; do
-    [[ -n "$line" ]] && history -s "$line"
-done < "$PROMPT_HISTORY_FILE"
+    # Skip empty lines and use -- to prevent lines starting with - being treated as options
+    [[ -n "$line" ]] && history -s -- "$line"
+done < "$PROMPT_HISTORY_FILE" 2>/dev/null
 
 # Clean exit on Ctrl+C
 trap 'clear 2>/dev/null; exit 0' INT TERM HUP
