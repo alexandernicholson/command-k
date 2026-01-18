@@ -194,6 +194,54 @@ fi
 set_setting "ai_provider" "$ORIG_PROVIDER"
 set_setting "custom_provider_cmd" "$ORIG_CUSTOM_CMD"
 
+section "Action Menu Features"
+
+# Check that action menu has all expected options
+if grep -q '\[i\]nsert.*\[c\]opy.*\[f\]ollow up.*\[n\]ew session.*\[q\]uit' "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "Action menu has all options (insert, copy, follow up, new session, quit)"
+else
+    fail "Action menu missing expected options"
+fi
+
+# Check that 'n' option clears session
+if grep -q 'n|N)' "$SCRIPT_DIR/scripts/interactive.sh" && \
+   grep -A5 'n|N)' "$SCRIPT_DIR/scripts/interactive.sh" | grep -q 'rm -f "$SESSION_FILE"'; then
+    pass "New session option clears session file"
+else
+    fail "New session option not properly implemented"
+fi
+
+# Check that clipboard failure doesn't exit (no 'exit' after error message)
+if grep -A2 'Clipboard not available' "$SCRIPT_DIR/scripts/interactive.sh" | grep -q 'exit'; then
+    fail "Clipboard failure should not exit"
+else
+    pass "Clipboard failure stays on action menu (no exit after error)"
+fi
+
+# Check that insert failure stays on action menu
+if grep -A3 'insert_result; then' "$SCRIPT_DIR/scripts/interactive.sh" | grep -q 'Insert failed'; then
+    pass "Insert failure shows error and stays on menu"
+else
+    fail "Insert failure handling not found"
+fi
+
+section "Error Recovery"
+
+# Test that action menu loop exists (while true inside the response handling)
+ACTION_LOOP=$(grep -c 'while true; do' "$SCRIPT_DIR/scripts/interactive.sh")
+if [[ "$ACTION_LOOP" -ge 2 ]]; then
+    pass "Action menu has its own loop for error recovery"
+else
+    fail "Action menu should have inner loop (found $ACTION_LOOP while loops)"
+fi
+
+# Check follow-up breaks out of action loop
+if grep -A2 'f|F)' "$SCRIPT_DIR/scripts/interactive.sh" | grep -q 'break'; then
+    pass "Follow-up breaks out of action loop correctly"
+else
+    fail "Follow-up should break out of action loop"
+fi
+
 section "Insert Function"
 
 # Test the send-keys command format (without actually sending)
