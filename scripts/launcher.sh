@@ -2,6 +2,9 @@
 # Launcher script to get pane ID and start popup
 # This is called by run-shell and handles all output suppression
 
+# Trap all signals to exit silently
+trap 'exit 0' INT TERM HUP EXIT
+
 # Get the source pane ID
 PANE=$(tmux display-message -p '#{pane_id}')
 
@@ -11,6 +14,8 @@ WIDTH="${COMMAND_K_WIDTH:-80%}"
 HEIGHT="${COMMAND_K_HEIGHT:-70%}"
 
 # Launch popup with all output suppressed
-exec tmux display-popup -E -w "$WIDTH" -h "$HEIGHT" \
+tmux display-popup -E -w "$WIDTH" -h "$HEIGHT" \
     -e "COMMAND_K_SOURCE_PANE=$PANE" \
-    "$SCRIPT_DIR/popup-wrapper.sh" 2>/dev/null
+    "$SCRIPT_DIR/popup-wrapper.sh" >/dev/null 2>&1
+
+exit 0

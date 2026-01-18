@@ -128,6 +128,40 @@ else
     echo -e "${YELLOW}!${NC} Not in tmux session, skipping insert test"
 fi
 
+section "Signal Handling"
+
+# Check that launcher.sh has signal traps
+if grep -q "trap.*INT" "$SCRIPT_DIR/scripts/launcher.sh"; then
+    pass "launcher.sh has INT signal trap"
+else
+    fail "launcher.sh missing INT signal trap"
+fi
+
+if grep -q "trap.*INT" "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "interactive.sh has INT signal trap"
+else
+    fail "interactive.sh missing INT signal trap"
+fi
+
+# Check popup-wrapper exits cleanly
+if grep -q "exit 0" "$SCRIPT_DIR/scripts/popup-wrapper.sh"; then
+    pass "popup-wrapper.sh exits with 0"
+else
+    fail "popup-wrapper.sh missing exit 0"
+fi
+
+section "Keybinding Format"
+
+# Check that run-shell doesn't use -b flag (causes return message)
+BINDING=$(tmux list-keys -T prefix C-k 2>/dev/null || echo "")
+if [[ -n "$BINDING" ]]; then
+    if echo "$BINDING" | grep -q "run-shell -b"; then
+        fail "Keybinding uses run-shell -b (causes Ctrl+C message)"
+    else
+        pass "Keybinding doesn't use run-shell -b"
+    fi
+fi
+
 # --- Summary ---
 
 echo -e "\n${YELLOW}== Summary ==${NC}"
