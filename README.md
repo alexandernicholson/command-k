@@ -18,13 +18,17 @@ Like Cursor's CMD+K, but for your terminal. Get AI-powered command suggestions w
 
 ### With TPM (recommended)
 
+Install [TPM (Tmux Plugin Manager)](https://github.com/tmux-plugins/tpm).
+
 Add to `~/.tmux.conf`:
 
 ```bash
 set -g @plugin 'alexandernicholson/command-k'
 ```
 
-Then press `prefix + I` to install.
+Then press `prefix + I` (as in, capital I) to install.
+
+Updates are performed with `prefix + U` (as in, capital U), followed by typing the name of the plugin, `commmand-k` and pressing ENTER.
 
 ### Manual
 
