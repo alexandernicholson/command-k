@@ -3,6 +3,9 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Debug: log to file
+echo "COMMAND_K_SOURCE_PANE=[$COMMAND_K_SOURCE_PANE]" > /tmp/cmdk-debug.log
+
 # Run the interactive script, always exit 0
 "$SCRIPT_DIR/interactive.sh"
 exit 0
