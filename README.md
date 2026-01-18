@@ -1,9 +1,9 @@
-# Command K - AI Command Assistant for tmux
+# Command K - AI Command Assistant
 
 ![IMG_6824](https://github.com/user-attachments/assets/ee82b449-47c9-46d8-a534-5c8f335c955d)
 
 
-Like Cursor's CMD+K, but for your terminal. Get AI-powered command suggestions with full context awareness.
+Like Cursor's CMD+K, but for your terminal and Neovim. Get AI-powered command and code suggestions with full context awareness.
 
 ![Command K Demo](https://vhs.charm.sh/vhs-Dc6dHb2teLwxP3l0nnyq6.gif)
 
@@ -49,12 +49,14 @@ tmux source ~/.tmux.conf
   - [Codex CLI](https://github.com/openai/codex) (`codex`)
 - bash 4+ or zsh
 - **For tmux plugin:** tmux 3.2+ (for `display-popup`)
-- **For standalone CLI:** [gum](https://github.com/charmbracelet/gum)
+- **For standalone CLI (bash):** [gum](https://github.com/charmbracelet/gum)
+- **For Rust CLI / Neovim:** Rust/Cargo (to build cmdk-rs)
 
 ## Usage
 
 ### Standalone CLI (no tmux required)
 
+**Bash version** (requires gum):
 ```bash
 # Add to your PATH
 ln -s ~/.tmux/plugins/command-k/cmdk ~/.local/bin/cmdk
@@ -71,6 +73,42 @@ cmdk -c
 # Privacy settings
 cmdk -s
 ```
+
+**Rust version** (faster, no gum dependency):
+```bash
+# Build
+cd cmdk-rs && cargo build --release
+
+# Add to your PATH
+ln -s ~/.tmux/plugins/command-k/cmdk-rs/target/release/cmdk-rs ~/.local/bin/cmdk-rs
+
+# Same commands as above
+cmdk-rs
+cmdk-rs -q "find files larger than 100MB"
+```
+
+### Neovim Plugin
+
+See [docs/NEOVIM.md](docs/NEOVIM.md) for full documentation.
+
+**Quick setup with lazy.nvim:**
+```lua
+{
+  "alexandernicholson/command-k",
+  build = "cd cmdk-rs && cargo build --release",
+  config = function()
+    require("cmdk").setup({
+      keymap = "<C-k>",  -- Press Ctrl+K to open
+    })
+  end,
+}
+```
+
+**Features:**
+- Opens in floating window (like tmux popup)
+- Captures buffer content, filetype, LSP diagnostics
+- Insert at cursor, replace line/selection, or copy
+- Visual mode support for refactoring selected code
 
 ### tmux Plugin
 

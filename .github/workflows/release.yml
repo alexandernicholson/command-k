@@ -1,0 +1,182 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmdk-rs/**'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Get the next version
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          # Get latest tag or default to v0.0.0
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+
+      - name: Calculate next version
+        id: version
+        run: |
+          LATEST_TAG="${{ steps.latest_tag.outputs.tag }}"
+          # Remove 'v' prefix
+          VERSION=${LATEST_TAG#v}
+          
+          # Split into parts
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          
+          # Determine bump type
+          BUMP="${{ github.event.inputs.bump || 'patch' }}"
+          
+          case $BUMP in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          NEW_TAG="v${NEW_VERSION}"
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION (tag: $NEW_TAG)"
+
+  # Build for each platform
+  build:
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: cmdk-rs-darwin-arm64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: cmdk-rs-linux-x86_64
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Update version in Cargo.toml
+        run: |
+          cd cmdk-rs
+          sed -i.bak 's/^version = ".*"/version = "${{ needs.version.outputs.version }}"/' Cargo.toml
+          rm -f Cargo.toml.bak
+          cat Cargo.toml | grep version
+
+      - name: Build
+        run: |
+          cd cmdk-rs
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        run: |
+          cd cmdk-rs/target/${{ matrix.target }}/release
+          tar -czvf ${{ matrix.artifact }}.tar.gz cmdk-rs
+          mv ${{ matrix.artifact }}.tar.gz ../../../../
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.tar.gz
+
+  # Create release
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: |
+          ls -la artifacts/
+          ls -la artifacts/*/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: Release ${{ needs.version.outputs.tag }}
+          body: |
+            ## cmdk-rs ${{ needs.version.outputs.version }}
+            
+            Rust implementation of Command K - AI-powered command assistant for terminal and Neovim.
+            
+            ### Downloads
+            
+            | Platform | Architecture | File |
+            |----------|--------------|------|
+            | macOS | ARM64 (Apple Silicon) | `cmdk-rs-darwin-arm64.tar.gz` |
+            | Linux | x86_64 | `cmdk-rs-linux-x86_64.tar.gz` |
+            
+            ### Installation
+            
+            ```bash
+            # macOS (Apple Silicon)
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ needs.version.outputs.tag }}/cmdk-rs-darwin-arm64.tar.gz | tar xz
+            sudo mv cmdk-rs /usr/local/bin/
+            
+            # Linux (x86_64)
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ needs.version.outputs.tag }}/cmdk-rs-linux-x86_64.tar.gz | tar xz
+            sudo mv cmdk-rs /usr/local/bin/
+            ```
+            
+            ### What's Changed
+            
+            See [commits since last release](https://github.com/${{ github.repository }}/compare/${{ needs.version.outputs.tag }}...main)
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/**/*.tar.gz
