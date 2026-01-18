@@ -13,6 +13,10 @@ Like Cursor's CMD+K, but for your terminal and Neovim. Get AI-powered command an
 - **Follow-ups**: Continue conversations without losing context
 - **Preview first**: See the suggestion before inserting
 - **Smart detection**: Knows if you're in vim, a REPL, SSH session, etc.
+- **Works anywhere**: SSH sessions, containers, any terminal — not locked to a specific app
+- **Use your own AI**: Bring Claude Code or Codex; no vendor lock-in
+- **No account required**: No sign-up, no telemetry
+- **Open source**: MIT licensed, fully hackable
 
 ## Variants
 
