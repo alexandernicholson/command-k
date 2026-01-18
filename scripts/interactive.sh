@@ -320,16 +320,33 @@ PROMPT_EOF
 
         case "$ACTION" in
             i|I)
-                insert_result
-                exit 0
+                if insert_result; then
+                    exit 0
+                else
+                    echo -e "${RED}Insert failed - choose another option${RESET}"
+                    echo
+                    continue
+                fi
                 ;;
             c|C)
-                echo "$RESPONSE" | xclip -selection clipboard 2>/dev/null || \
-                echo "$RESPONSE" | pbcopy 2>/dev/null || \
-                echo -e "${RED}Clipboard not available${RESET}"
-                echo -e "${GREEN}✓ Copied to clipboard${RESET}"
-                sleep 0.5
-                exit 0
+                if echo "$RESPONSE" | xclip -selection clipboard 2>/dev/null; then
+                    echo -e "${GREEN}✓ Copied to clipboard${RESET}"
+                    sleep 0.5
+                    exit 0
+                elif echo "$RESPONSE" | pbcopy 2>/dev/null; then
+                    echo -e "${GREEN}✓ Copied to clipboard${RESET}"
+                    sleep 0.5
+                    exit 0
+                elif echo "$RESPONSE" | xsel --clipboard 2>/dev/null; then
+                    echo -e "${GREEN}✓ Copied to clipboard${RESET}"
+                    sleep 0.5
+                    exit 0
+                else
+                    echo -e "${RED}Clipboard not available (no xclip, pbcopy, or xsel)${RESET}"
+                    echo -e "${DIM}You can manually copy the command above${RESET}"
+                    echo
+                    continue
+                fi
                 ;;
             f|F)
                 echo
@@ -363,6 +380,7 @@ insert_result() {
     
     echo -e "${GREEN}✓ Inserted to terminal${RESET}"
     sleep 0.3
+    return 0
 }
 
 # Cleanup on exit
