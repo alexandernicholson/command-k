@@ -4,21 +4,32 @@
 
 Command K is a tmux plugin that provides AI-powered command suggestions. It captures terminal context, sends it to an AI provider, and inserts the suggested command into your terminal.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         tmux                                 │
-│  ┌─────────────────┐    ┌────────────────────────────────┐  │
-│  │  Source Pane    │    │         Popup Window           │  │
-│  │                 │    │  ┌──────────────────────────┐  │  │
-│  │  $ _            │◄───│  │    interactive.sh        │  │  │
-│  │                 │    │  │                          │  │  │
-│  │                 │    │  │  - Capture context       │  │  │
-│  │                 │    │  │  - Get user prompt       │  │  │
-│  │                 │    │  │  - Call AI provider      │  │  │
-│  │                 │    │  │  - Insert result         │  │  │
-│  │                 │    │  └──────────────────────────┘  │  │
-│  └─────────────────┘    └────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph tmux["tmux"]
+        subgraph source["Source Pane"]
+            terminal["$ _"]
+        end
+        
+        subgraph popup["Popup Window"]
+            interactive["interactive.sh"]
+        end
+    end
+    
+    subgraph flow["Data Flow"]
+        context["context.sh"]
+        settings["settings.sh"]
+        provider["AI Provider"]
+    end
+    
+    trigger["⌘ prefix + C-k"] --> launcher["launcher.sh"]
+    launcher --> popup
+    interactive --> context
+    context --> |"Terminal context"| interactive
+    interactive --> |"User prompt"| settings
+    settings --> |"Route query"| provider
+    provider --> |"Command suggestion"| interactive
+    interactive --> |"send-keys"| terminal
 ```
 
 ## Components
