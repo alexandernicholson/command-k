@@ -32,10 +32,8 @@ POPUP_HEIGHT=$(get_tmux_option "@command-k-height" "70%")
 export COMMAND_K_HISTORY_DIR="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}"
 
 # Bind the key
-# We pass the current pane ID to the script via environment variable
-# Get pane_id first via display-message, then pass to popup
-# Wrap everything in subshell with all output suppressed to prevent Ctrl+C message
-tmux bind-key "$KEY" run-shell -b "{ PANE=\$(tmux display-message -p '#{pane_id}'); tmux display-popup -E -w '$POPUP_WIDTH' -h '$POPUP_HEIGHT' -e COMMAND_K_SOURCE_PANE=\"\$PANE\" '$CURRENT_DIR/scripts/popup-wrapper.sh'; } >/dev/null 2>&1"
+# Use launcher script to avoid Ctrl+C showing command
+tmux bind-key "$KEY" run-shell -b "COMMAND_K_WIDTH='$POPUP_WIDTH' COMMAND_K_HEIGHT='$POPUP_HEIGHT' '$CURRENT_DIR/scripts/launcher.sh' 2>/dev/null"
 
 # Also bind without prefix for quick access (optional, commented by default)
 # Uncomment to enable: tmux bind-key -n M-k ...
