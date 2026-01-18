@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # Settings management for Command K
-# Compatible with bash 4+ and zsh
+# Compatible with bash 3.2+ (macOS default) and Linux
 
 SETTINGS_FILE="${COMMAND_K_HISTORY_DIR:-$HOME/.command-k}/settings.conf"
 
-# Default settings (all enabled)
-declare -A DEFAULT_SETTINGS=(
-    [send_terminal_content]="true"
-    [send_shell_history]="true"
-    [send_git_status]="true"
-    [send_working_dir]="true"
-    [send_env_var_names]="true"
-    [send_shell_type]="true"
-    [send_terminal_size]="true"
-    [send_current_process]="true"
-    [ai_provider]="auto"
-    [custom_provider_cmd]=""
-)
+# List of all setting keys (for iteration)
+SETTING_KEYS="send_terminal_content send_shell_history send_git_status send_working_dir send_env_var_names send_shell_type send_terminal_size send_current_process ai_provider custom_provider_cmd"
+
+# Get default value for a setting (bash 3.2 compatible - no associative arrays)
+get_default_setting() {
+    local key="$1"
+    case "$key" in
+        send_terminal_content) echo "true" ;;
+        send_shell_history)    echo "true" ;;
+        send_git_status)       echo "true" ;;
+        send_working_dir)      echo "true" ;;
+        send_env_var_names)    echo "true" ;;
+        send_shell_type)       echo "true" ;;
+        send_terminal_size)    echo "true" ;;
+        send_current_process)  echo "true" ;;
+        ai_provider)           echo "auto" ;;
+        custom_provider_cmd)   echo "" ;;
+        *)                     echo "true" ;;
+    esac
+}
 
 # Initialize settings file with defaults if it doesn't exist
 init_settings() {
@@ -61,7 +68,8 @@ EOF
 # Read a setting value
 get_setting() {
     local key="$1"
-    local default="${DEFAULT_SETTINGS[$key]:-true}"
+    local default
+    default=$(get_default_setting "$key")
     
     init_settings
     
@@ -82,8 +90,10 @@ set_setting() {
     init_settings
     
     if grep -q "^${key}=" "$SETTINGS_FILE" 2>/dev/null; then
-        # Update existing setting (use | as delimiter to handle paths with /)
-        sed -i "s|^${key}=.*|${key}=${value}|" "$SETTINGS_FILE"
+        # Update existing setting (portable sed -i for macOS and Linux)
+        local tmpfile
+        tmpfile=$(mktemp)
+        sed "s|^${key}=.*|${key}=${value}|" "$SETTINGS_FILE" > "$tmpfile" && mv "$tmpfile" "$SETTINGS_FILE"
     else
         # Add new setting
         echo "${key}=${value}" >> "$SETTINGS_FILE"
@@ -102,11 +112,11 @@ toggle_setting() {
     fi
 }
 
-# Get all settings as associative array output
+# Get all settings as key=value output
 get_all_settings() {
     init_settings
     
-    for key in "${!DEFAULT_SETTINGS[@]}"; do
+    for key in $SETTING_KEYS; do
         echo "$key=$(get_setting "$key")"
     done
 }
@@ -225,4 +235,4 @@ get_current_provider_name() {
 }
 
 # Export for use in other scripts
-export -f init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command run_ai_query list_ai_providers get_current_provider_name 2>/dev/null || true
+export -f get_default_setting init_settings get_setting set_setting toggle_setting get_all_settings get_ai_command run_ai_query list_ai_providers get_current_provider_name 2>/dev/null || true
