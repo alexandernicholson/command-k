@@ -47,7 +47,8 @@ ORIGINAL_PANE="${ORIGINAL_PANE:-$(tmux display-message -p '#{pane_id}')}"
 
 # For popup, we need to get the pane that was active before the popup
 if [[ -n "$COMMAND_K_SOURCE_PANE" ]]; then
-    SOURCE_PANE="$COMMAND_K_SOURCE_PANE"
+    # Trim any whitespace
+    SOURCE_PANE="${COMMAND_K_SOURCE_PANE//[[:space:]]/}"
 else
     SOURCE_PANE="$ORIGINAL_PANE"
 fi
@@ -353,9 +354,11 @@ insert_result() {
     # Read result and strip trailing whitespace/newlines
     RESULT=$(cat "$RESULT_FILE" | tr -d '\r' | sed 's/[[:space:]]*$//')
     
-    # Use -l flag for literal input (no special key interpretation)
-    # This prevents tmux from interpreting characters like Enter, Tab, etc.
-    tmux send-keys -t "$SOURCE_PANE" -l "$RESULT"
+    # Send to the source pane using -l for literal text
+    if ! tmux send-keys -t "$SOURCE_PANE" -l "$RESULT" 2>&1; then
+        echo -e "${RED}Failed to insert (pane: $SOURCE_PANE)${RESET}"
+        return 1
+    fi
     
     echo -e "${GREEN}✓ Inserted to terminal${RESET}"
     sleep 0.3
