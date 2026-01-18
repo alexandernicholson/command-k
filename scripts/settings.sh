@@ -15,6 +15,7 @@ declare -A DEFAULT_SETTINGS=(
     [send_terminal_size]="true"
     [send_current_process]="true"
     [ai_provider]="auto"
+    [custom_provider_cmd]=""
 )
 
 # Initialize settings file with defaults if it doesn't exist
@@ -64,12 +65,12 @@ get_setting() {
     
     init_settings
     
-    local value=$(grep "^${key}=" "$SETTINGS_FILE" 2>/dev/null | cut -d= -f2 | tr -d ' ')
-    
-    if [[ -z "$value" ]]; then
-        echo "$default"
+    # Check if setting exists in file
+    if grep -q "^${key}=" "$SETTINGS_FILE" 2>/dev/null; then
+        # Return value (may be empty)
+        grep "^${key}=" "$SETTINGS_FILE" 2>/dev/null | cut -d= -f2 | tr -d ' '
     else
-        echo "$value"
+        echo "$default"
     fi
 }
 
@@ -81,8 +82,8 @@ set_setting() {
     init_settings
     
     if grep -q "^${key}=" "$SETTINGS_FILE" 2>/dev/null; then
-        # Update existing setting
-        sed -i "s/^${key}=.*/${key}=${value}/" "$SETTINGS_FILE"
+        # Update existing setting (use | as delimiter to handle paths with /)
+        sed -i "s|^${key}=.*|${key}=${value}|" "$SETTINGS_FILE"
     else
         # Add new setting
         echo "${key}=${value}" >> "$SETTINGS_FILE"
@@ -112,7 +113,8 @@ get_all_settings() {
 
 # Get the AI command to use
 # Returns: command string to pipe input to
-# For codex, use run_ai_query function instead
+# For codex, returns "CODEX" marker - use run_ai_query function
+# For custom, returns the user-specified command
 get_ai_command() {
     local provider=$(get_setting "ai_provider")
     
@@ -130,6 +132,16 @@ get_ai_command() {
                 echo "CODEX"  # Special marker - use run_ai_query
             else
                 echo "ERROR: codex not found" >&2
+                return 1
+            fi
+            ;;
+        custom)
+            # User-provided custom command
+            local custom_cmd=$(get_setting "custom_provider_cmd")
+            if [[ -n "$custom_cmd" ]]; then
+                echo "$custom_cmd"
+            else
+                echo "ERROR: custom_provider_cmd not set" >&2
                 return 1
             fi
             ;;
@@ -198,6 +210,7 @@ get_current_provider_name() {
     case "$provider" in
         claude) echo "Claude" ;;
         codex) echo "Codex" ;;
+        custom) echo "Custom" ;;
         mock) echo "Mock (test)" ;;
         auto|*)
             if command -v claude &>/dev/null; then

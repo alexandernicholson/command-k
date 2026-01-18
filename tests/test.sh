@@ -156,6 +156,44 @@ fi
 # Restore original provider
 set_setting "ai_provider" "$ORIG_PROVIDER"
 
+section "Custom Provider"
+
+# Save original settings
+ORIG_PROVIDER=$(get_setting "ai_provider")
+ORIG_CUSTOM_CMD=$(get_setting "custom_provider_cmd")
+
+# Test custom provider with mock-ai as the custom command
+set_setting "ai_provider" "custom"
+set_setting "custom_provider_cmd" "$SCRIPT_DIR/tests/mock-ai"
+
+CUSTOM_CMD=$(get_ai_command 2>/dev/null)
+if [[ "$CUSTOM_CMD" == "$SCRIPT_DIR/tests/mock-ai" ]]; then
+    pass "Custom provider returns configured command"
+else
+    fail "Custom provider returned: $CUSTOM_CMD"
+fi
+
+# Test custom provider flow
+CUSTOM_RESULT=$(echo "show running processes" | run_ai_query 2>/dev/null)
+if [[ "$CUSTOM_RESULT" == "ps aux | head -20" ]]; then
+    pass "Custom provider executes correctly"
+else
+    fail "Custom provider returned: $CUSTOM_RESULT"
+fi
+
+# Test custom provider without command set
+set_setting "custom_provider_cmd" ""
+EMPTY_CMD=$(get_ai_command 2>&1)
+if [[ "$EMPTY_CMD" == *"custom_provider_cmd not set"* ]]; then
+    pass "Custom provider errors when command not set"
+else
+    fail "Custom provider should error when command not set: $EMPTY_CMD"
+fi
+
+# Restore original settings
+set_setting "ai_provider" "$ORIG_PROVIDER"
+set_setting "custom_provider_cmd" "$ORIG_CUSTOM_CMD"
+
 section "Insert Function"
 
 # Test the send-keys command format (without actually sending)
