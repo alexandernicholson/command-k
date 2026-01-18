@@ -242,6 +242,43 @@ else
     fail "Follow-up should break out of action loop"
 fi
 
+section "History and Escape Handling"
+
+# Check that prompt uses read -e for readline history support
+if grep -q 'read -e -p' "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "Prompt uses read -e for readline/history support"
+else
+    fail "Prompt should use read -e for history"
+fi
+
+# Check that escape key handling distinguishes arrow keys from plain escape
+if grep -q "read -r -n 2.*EXTRA" "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "Escape handling reads extra chars to detect arrow keys"
+else
+    fail "Escape handling should read extra chars for arrow key detection"
+fi
+
+# Check that arrow keys don't trigger quit
+if grep -q 'Arrow key.*ignore' "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "Arrow keys are ignored, not treated as quit"
+else
+    fail "Arrow keys should be ignored in action menu"
+fi
+
+# Check history file is used
+if grep -q 'PROMPT_HISTORY_FILE' "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "Script uses prompt history file"
+else
+    fail "Script should use prompt history file"
+fi
+
+# Check history is loaded on startup
+if grep -q 'history -s' "$SCRIPT_DIR/scripts/interactive.sh"; then
+    pass "History is loaded into readline"
+else
+    fail "History should be loaded into readline"
+fi
+
 section "Insert Function"
 
 # Test the send-keys command format (without actually sending)

@@ -359,8 +359,18 @@ PROMPT_EOF
                     main
                     exit 0
                     ;;
-                q|Q|$'\e')
+                q|Q)
                     exit 0
+                    ;;
+                $'\e')
+                    # Escape key - could be arrow key sequence, read remaining chars
+                    read -r -n 2 -t 0.1 EXTRA 2>/dev/null || true
+                    # If it was just escape (no extra chars), treat as quit
+                    # If it was arrow key ([A, [B, etc), ignore
+                    if [[ -z "$EXTRA" ]]; then
+                        exit 0
+                    fi
+                    # Arrow key or other escape sequence - just ignore
                     ;;
                 *)
                     # Invalid key - just re-show menu
