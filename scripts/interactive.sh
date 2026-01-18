@@ -314,7 +314,7 @@ PROMPT_EOF
 
         # Action menu loop - stays here until success or explicit exit
         while true; do
-            echo -e "${YELLOW}[i]nsert to terminal | [c]opy to clipboard | [f]ollow up | [q]uit${RESET}"
+            echo -e "${YELLOW}[i]nsert | [c]opy | [f]ollow up | [n]ew session | [q]uit${RESET}"
             echo -n "> "
             read -r -n 1 ACTION
             echo
@@ -350,6 +350,14 @@ PROMPT_EOF
                 f|F)
                     # Break out of action loop, continue to prompt loop
                     break
+                    ;;
+                n|N)
+                    # Clear session and restart
+                    rm -f "$SESSION_FILE"
+                    echo -e "${GREEN}✓ Session cleared${RESET}"
+                    sleep 0.3
+                    main
+                    exit 0
                     ;;
                 q|Q|$'\e')
                     exit 0
