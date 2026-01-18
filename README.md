@@ -2,7 +2,7 @@
 
 Like Cursor's CMD+K, but for your terminal. Get AI-powered command suggestions with full context awareness.
 
-![Command K Demo](https://vhs.charm.sh/vhs-6l0raHiWteDMBdVmH9UmUY.gif)
+![Command K Demo](https://vhs.charm.sh/vhs-6H63ytZatiEpIRYHlvEuNn.gif)
 
 ## Features
 

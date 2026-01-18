@@ -10,24 +10,18 @@ Set Padding 10
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 50ms
 
-# Setup
+# Setup - all hidden
 Hide
 Type "tmux kill-server 2>/dev/null"
 Enter
 Type "export PS1='\\u:\\w\\$ '"
 Enter
-# Source nvm to get codex in PATH
 Type "source ~/.nvm/nvm.sh 2>/dev/null"
 Enter
 Sleep 300ms
-Show
-
-# Start tmux
 Type "tmux"
 Enter
 Sleep 1s
-
-# Set simple prompt and clean status bar (remove hostname)
 Type "export PS1='\\u:\\w\\$ '"
 Enter
 Type "tmux set status-left '[#S] '"
@@ -37,6 +31,7 @@ Enter
 Type "cd ~/.tmux/plugins/command-k && clear"
 Enter
 Sleep 500ms
+Show
 
 # Trigger Command K (prefix + C-k)
 Ctrl+b
