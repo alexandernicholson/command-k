@@ -28,7 +28,7 @@ set -g @plugin 'alexandernicholson/command-k'
 
 Then press `prefix + I` (as in, capital I) to install.
 
-Updates are performed with `prefix + U` (as in, capital U), followed by typing the name of the plugin, `commmand-k` and pressing ENTER.
+Updates are performed with `prefix + U` (as in, capital U), followed by typing the name of the plugin, `command-k` and pressing ENTER.
 
 ### Manual
 
