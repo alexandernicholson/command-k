@@ -218,6 +218,48 @@ local function write_context_file(ctx)
   return tmpfile
 end
 
+-- Check if a string contains special key notation
+local function contains_special_keys(str)
+  return str:match("<[A-Za-z%-]+>") ~= nil
+end
+
+-- Convert special key notation to Neovim's internal format
+local function convert_special_keys(str)
+  local key_map = {
+    ["<Esc>"] = "<Esc>",
+    ["<Enter>"] = "<CR>",
+    ["<CR>"] = "<CR>",
+    ["<Tab>"] = "<Tab>",
+    ["<BS>"] = "<BS>",
+    ["<Del>"] = "<Del>",
+    ["<Up>"] = "<Up>",
+    ["<Down>"] = "<Down>",
+    ["<Left>"] = "<Left>",
+    ["<Right>"] = "<Right>",
+    ["<Space>"] = "<Space>",
+  }
+
+  local result = str
+
+  -- Convert known keys
+  for from, to in pairs(key_map) do
+    result = result:gsub(vim.pesc(from), to)
+  end
+
+  -- Convert Ctrl combinations: <C-x> stays as <C-x>
+  -- Convert Alt combinations: <M-x> or <A-x> -> <M-x>
+  result = result:gsub("<A%-([a-zA-Z])>", "<M-%1>")
+
+  return result
+end
+
+-- Execute special keys using feedkeys
+local function execute_special_keys(str)
+  local converted = convert_special_keys(str)
+  local keys = vim.api.nvim_replace_termcodes(converted, true, false, true)
+  vim.api.nvim_feedkeys(keys, "n", false)
+end
+
 -- Handle the result from cmdk-rs
 local function handle_result(action, result)
   if not result or result == "" then
@@ -238,6 +280,9 @@ local function handle_result(action, result)
   if buf_type == "terminal" or buf_type == "nofile" or buf_type == "prompt" then
     buf_modifiable = false
   end
+
+  -- Check if result contains special keys
+  local has_special_keys = contains_special_keys(result)
 
   if action == "insert" then
     if buf_modifiable then
@@ -270,10 +315,17 @@ local function handle_result(action, result)
     vim.fn.setreg('"', result)
     vim.notify("Copied to clipboard", vim.log.levels.INFO)
   elseif action == "run" then
-    -- Run as vim command
-    local ok, err = pcall(vim.cmd, result)
-    if not ok then
-      vim.notify("Failed to run command: " .. err, vim.log.levels.ERROR)
+    -- Check if result contains special keys
+    if has_special_keys then
+      -- Execute as keystrokes
+      execute_special_keys(result)
+      vim.notify("Executed key sequence", vim.log.levels.INFO)
+    else
+      -- Run as vim command
+      local ok, err = pcall(vim.cmd, result)
+      if not ok then
+        vim.notify("Failed to run command: " .. err, vim.log.levels.ERROR)
+      end
     end
   end
 end

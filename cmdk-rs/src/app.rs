@@ -630,28 +630,150 @@ pub fn run_interactive_mode() -> Result<()> {
 
     // Run command if requested (after exiting TUI)
     if let Some(cmd) = command_to_run {
-        println!("\x1b[1;33m▶ Running:\x1b[0m {}", cmd);
-        println!();
-        let status = Command::new("sh").arg("-c").arg(&cmd).status();
-        match status {
-            Ok(s) => {
-                println!();
-                if s.success() {
-                    println!("\x1b[1;32m✓ Command completed successfully\x1b[0m");
-                } else {
-                    println!(
-                        "\x1b[1;31m✗ Command exited with code {}\x1b[0m",
-                        s.code().unwrap_or(-1)
-                    );
+        // Check if command contains special key notation
+        if contains_special_keys(&cmd) {
+            println!("\x1b[1;36m📋 Key Sequence:\x1b[0m");
+            println!();
+            println!("  {}", format_key_sequence(&cmd));
+            println!();
+            println!("\x1b[1;33mThis contains special keys that must be pressed manually.\x1b[0m");
+            println!();
+            print_key_legend(&cmd);
+            
+            // Copy to clipboard
+            if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                // Copy without the special key notation for pasting the text parts
+                let plain = strip_special_keys(&cmd);
+                if !plain.is_empty() {
+                    clipboard.set_text(&plain).ok();
+                    println!("\x1b[32m✓ Text parts copied to clipboard\x1b[0m");
                 }
             }
-            Err(e) => {
-                eprintln!("\x1b[1;31m✗ Failed to run command: {}\x1b[0m", e);
+        } else {
+            println!("\x1b[1;33m▶ Running:\x1b[0m {}", cmd);
+            println!();
+            let status = Command::new("sh").arg("-c").arg(&cmd).status();
+            match status {
+                Ok(s) => {
+                    println!();
+                    if s.success() {
+                        println!("\x1b[1;32m✓ Command completed successfully\x1b[0m");
+                    } else {
+                        println!(
+                            "\x1b[1;31m✗ Command exited with code {}\x1b[0m",
+                            s.code().unwrap_or(-1)
+                        );
+                    }
+                }
+                Err(e) => {
+                    eprintln!("\x1b[1;31m✗ Failed to run command: {}\x1b[0m", e);
+                }
             }
         }
     }
 
     Ok(())
+}
+
+/// Check if a string contains special key notation
+fn contains_special_keys(s: &str) -> bool {
+    let patterns = [
+        "<Esc>", "<Enter>", "<CR>", "<Tab>", "<BS>", "<Del>",
+        "<Up>", "<Down>", "<Left>", "<Right>", "<Space>",
+        "<C-", "<M-", "<A-", "<F1", "<F2", "<F3", "<F4", "<F5",
+        "<F6", "<F7", "<F8", "<F9", "<F10", "<F11", "<F12",
+    ];
+    patterns.iter().any(|p| s.contains(p))
+}
+
+/// Format a key sequence for display with colors
+fn format_key_sequence(s: &str) -> String {
+    let mut result = s.to_string();
+    
+    // Highlight special keys in cyan
+    let keys = [
+        "<Esc>", "<Enter>", "<CR>", "<Tab>", "<BS>", "<Del>",
+        "<Up>", "<Down>", "<Left>", "<Right>", "<Space>",
+    ];
+    
+    for key in keys {
+        result = result.replace(key, &format!("\x1b[1;36m{}\x1b[0m", key));
+    }
+    
+    // Highlight Ctrl combinations
+    let ctrl_re = regex_lite::Regex::new(r"<C-[a-zA-Z]>").unwrap();
+    result = ctrl_re.replace_all(&result, "\x1b[1;35m$0\x1b[0m").to_string();
+    
+    // Highlight function keys
+    let fn_re = regex_lite::Regex::new(r"<F\d+>").unwrap();
+    result = fn_re.replace_all(&result, "\x1b[1;35m$0\x1b[0m").to_string();
+    
+    result
+}
+
+/// Print a legend explaining the special keys in the command
+fn print_key_legend(s: &str) {
+    let mut legend = Vec::new();
+    
+    if s.contains("<Esc>") {
+        legend.push("  <Esc>    = Press Escape key");
+    }
+    if s.contains("<Enter>") || s.contains("<CR>") {
+        legend.push("  <Enter>  = Press Enter/Return key");
+    }
+    if s.contains("<Tab>") {
+        legend.push("  <Tab>    = Press Tab key");
+    }
+    if s.contains("<C-") {
+        legend.push("  <C-x>    = Press Ctrl + x");
+    }
+    if s.contains("<M-") || s.contains("<A-") {
+        legend.push("  <M-x>    = Press Alt + x");
+    }
+    if s.contains("<Space>") {
+        legend.push("  <Space>  = Press Space bar");
+    }
+    
+    if !legend.is_empty() {
+        println!("\x1b[90mKey Legend:\x1b[0m");
+        for item in legend {
+            println!("\x1b[90m{}\x1b[0m", item);
+        }
+        println!();
+    }
+}
+
+/// Strip special key notation from a string (for clipboard)
+fn strip_special_keys(s: &str) -> String {
+    let mut result = s.to_string();
+    
+    // Remove special key notations but keep the text between them
+    let patterns = [
+        ("<Esc>", ""),
+        ("<Enter>", ""),
+        ("<CR>", ""),
+        ("<Tab>", "\t"),
+        ("<BS>", ""),
+        ("<Del>", ""),
+        ("<Up>", ""),
+        ("<Down>", ""),
+        ("<Left>", ""),
+        ("<Right>", ""),
+        ("<Space>", " "),
+    ];
+    
+    for (key, replacement) in patterns {
+        result = result.replace(key, replacement);
+    }
+    
+    // Remove Ctrl and other combinations
+    let ctrl_re = regex_lite::Regex::new(r"<[CMA]-[a-zA-Z]>").unwrap();
+    result = ctrl_re.replace_all(&result, "").to_string();
+    
+    let fn_re = regex_lite::Regex::new(r"<F\d+>").unwrap();
+    result = fn_re.replace_all(&result, "").to_string();
+    
+    result.trim().to_string()
 }
 
 /// Run settings mode (opens settings directly)

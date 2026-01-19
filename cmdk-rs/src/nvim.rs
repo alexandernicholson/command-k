@@ -120,6 +120,7 @@ impl NvimContext {
 pub enum NvimResultAction {
     Insert,      // Insert at cursor
     Replace,     // Replace current line or selection
+    Run,         // Execute as keystrokes/command
     Copy,        // Copy to clipboard
     Cancel,      // Cancel/go back
 }
@@ -156,6 +157,7 @@ impl NvimApp {
             nvim_actions: vec![
                 NvimResultAction::Insert,
                 NvimResultAction::Replace,
+                NvimResultAction::Run,
                 NvimResultAction::Copy,
                 NvimResultAction::Cancel,
             ],
@@ -413,6 +415,7 @@ fn render_nvim(frame: &mut ratatui::Frame, app: &NvimApp) {
                     let text = match action {
                         NvimResultAction::Insert => "Insert at cursor",
                         NvimResultAction::Replace => "Replace line/selection",
+                        NvimResultAction::Run => "Run/execute keys",
                         NvimResultAction::Copy => "Copy to clipboard",
                         NvimResultAction::Cancel => "Cancel",
                     };
@@ -700,6 +703,7 @@ pub fn run_nvim_mode(context_file: &str) -> Result<()> {
             let action_str = match action {
                 NvimResultAction::Insert => "insert",
                 NvimResultAction::Replace => "replace",
+                NvimResultAction::Run => "run",
                 NvimResultAction::Copy => "copy",
                 NvimResultAction::Cancel => "cancel",
             };

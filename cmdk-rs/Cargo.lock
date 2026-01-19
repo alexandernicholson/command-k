@@ -222,6 +222,7 @@ dependencies = [
  "dirs",
  "md-5",
  "ratatui",
+ "regex-lite",
  "serde",
  "thiserror 2.0.17",
  "tokio",
@@ -891,6 +892,12 @@ dependencies = [
  "libredox",
  "thiserror 1.0.69",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d942b98df5e658f56f20d592c7f868833fe38115e65c33003d8cd224b0155da"
 
 [[package]]
 name = "rustix"

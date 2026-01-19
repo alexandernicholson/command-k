@@ -264,6 +264,28 @@ CRITICAL RULES:
 - Single command only (use && or ; for multiple)
 - If asked for explanation, then explain - otherwise just the command
 
+SPECIAL KEYS:
+When the user needs to press special keys (like exiting vim, or keyboard shortcuts), use this notation:
+- <Esc> - Escape key
+- <Enter> or <CR> - Enter/Return key
+- <Tab> - Tab key
+- <BS> - Backspace
+- <Del> - Delete
+- <Up>, <Down>, <Left>, <Right> - Arrow keys
+- <C-x> - Ctrl+x (e.g., <C-c> for Ctrl+C, <C-d> for Ctrl+D)
+- <M-x> or <A-x> - Alt+x
+- <F1> through <F12> - Function keys
+- <Space> - Space (when it needs to be explicit)
+
+For vim/vi operations:
+- Always consider the current mode (INSERT, NORMAL, VISUAL, COMMAND)
+- If in INSERT mode, include <Esc> before normal mode commands
+- Example: To save and quit from INSERT mode: <Esc>:wq<Enter>
+- Example: To exit without saving from INSERT mode: <Esc>:q!<Enter>
+
+For tmux operations:
+- Use prefix notation like: <C-b>d (Ctrl+B then d)
+
 Context from user's terminal:
 $(cat "$CONTEXT_FILE")
 
@@ -301,6 +323,11 @@ PROMPT_EOF
         echo "$RESPONSE"
         echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━${RESET}"
         echo
+        
+        # Show key legend if special keys are present
+        if contains_special_keys "$RESPONSE"; then
+            show_key_legend "$RESPONSE"
+        fi
 
         # Save to result file
         echo "$RESPONSE" > "$RESULT_FILE"
@@ -380,6 +407,135 @@ PROMPT_EOF
     done
 }
 
+# Check if a string contains special key notation
+contains_special_keys() {
+    local text="$1"
+    # Use simple glob patterns for reliable matching
+    [[ "$text" == *"<Esc>"* ]] || \
+    [[ "$text" == *"<Enter>"* ]] || \
+    [[ "$text" == *"<CR>"* ]] || \
+    [[ "$text" == *"<Tab>"* ]] || \
+    [[ "$text" == *"<BS>"* ]] || \
+    [[ "$text" == *"<Del>"* ]] || \
+    [[ "$text" == *"<Up>"* ]] || \
+    [[ "$text" == *"<Down>"* ]] || \
+    [[ "$text" == *"<Left>"* ]] || \
+    [[ "$text" == *"<Right>"* ]] || \
+    [[ "$text" == *"<Space>"* ]] || \
+    [[ "$text" == *"<C-"* ]] || \
+    [[ "$text" == *"<M-"* ]] || \
+    [[ "$text" == *"<A-"* ]] || \
+    [[ "$text" == *"<F1>"* ]] || \
+    [[ "$text" == *"<F2>"* ]] || \
+    [[ "$text" == *"<F3>"* ]] || \
+    [[ "$text" == *"<F4>"* ]] || \
+    [[ "$text" == *"<F5>"* ]] || \
+    [[ "$text" == *"<F6>"* ]] || \
+    [[ "$text" == *"<F7>"* ]] || \
+    [[ "$text" == *"<F8>"* ]] || \
+    [[ "$text" == *"<F9>"* ]] || \
+    [[ "$text" == *"<F10>"* ]] || \
+    [[ "$text" == *"<F11>"* ]] || \
+    [[ "$text" == *"<F12>"* ]]
+}
+
+# Convert special key notation to tmux send-keys format and send
+send_with_special_keys() {
+    local text="$1"
+    local pane="$2"
+    
+    # Process the string character by character, handling special keys
+    local remaining="$text"
+    
+    while [[ -n "$remaining" ]]; do
+        # Check if current position starts with a special key
+        if [[ "$remaining" =~ ^\<([^>]+)\>(.*) ]]; then
+            local key="${BASH_REMATCH[1]}"
+            remaining="${BASH_REMATCH[2]}"
+            
+            # Convert to tmux key format
+            case "$key" in
+                Esc)       tmux send-keys -t "$pane" Escape ;;
+                Enter|CR)  tmux send-keys -t "$pane" Enter ;;
+                Tab)       tmux send-keys -t "$pane" Tab ;;
+                BS)        tmux send-keys -t "$pane" BSpace ;;
+                Del)       tmux send-keys -t "$pane" DC ;;
+                Up)        tmux send-keys -t "$pane" Up ;;
+                Down)      tmux send-keys -t "$pane" Down ;;
+                Left)      tmux send-keys -t "$pane" Left ;;
+                Right)     tmux send-keys -t "$pane" Right ;;
+                Space)     tmux send-keys -t "$pane" Space ;;
+                C-?)
+                    # Ctrl combinations: C-c -> C-c (tmux understands this format)
+                    tmux send-keys -t "$pane" "$key"
+                    ;;
+                M-?|A-?)
+                    # Alt combinations: A-x -> M-x for tmux
+                    local alt_key="${key/A-/M-}"
+                    tmux send-keys -t "$pane" "$alt_key"
+                    ;;
+                F[0-9]|F1[0-2])
+                    # Function keys
+                    tmux send-keys -t "$pane" "$key"
+                    ;;
+                *)
+                    # Unknown special key - send literally
+                    tmux send-keys -t "$pane" -l "<$key>"
+                    ;;
+            esac
+        else
+            # Find the next special key or end of string
+            if [[ "$remaining" =~ ^([^<]+)(.*) ]]; then
+                local literal="${BASH_REMATCH[1]}"
+                remaining="${BASH_REMATCH[2]}"
+                # Send literal text
+                tmux send-keys -t "$pane" -l "$literal"
+            else
+                # No more special keys, send rest as literal
+                tmux send-keys -t "$pane" -l "$remaining"
+                break
+            fi
+        fi
+    done
+}
+
+# Display key legend for special keys
+show_key_legend() {
+    local text="$1"
+    local has_legend=false
+    
+    echo -e "${DIM}Key Legend:${RESET}"
+    
+    if [[ "$text" == *"<Esc>"* ]]; then
+        echo -e "  ${DIM}<Esc>    = Escape key${RESET}"
+        has_legend=true
+    fi
+    if [[ "$text" == *"<Enter>"* || "$text" == *"<CR>"* ]]; then
+        echo -e "  ${DIM}<Enter>  = Enter/Return key${RESET}"
+        has_legend=true
+    fi
+    if [[ "$text" == *"<Tab>"* ]]; then
+        echo -e "  ${DIM}<Tab>    = Tab key${RESET}"
+        has_legend=true
+    fi
+    if [[ "$text" == *"<C-"* ]]; then
+        echo -e "  ${DIM}<C-x>    = Ctrl + x${RESET}"
+        has_legend=true
+    fi
+    if [[ "$text" == *"<M-"* || "$text" == *"<A-"* ]]; then
+        echo -e "  ${DIM}<M-x>    = Alt + x${RESET}"
+        has_legend=true
+    fi
+    if [[ "$text" == *"<Space>"* ]]; then
+        echo -e "  ${DIM}<Space>  = Space bar${RESET}"
+        has_legend=true
+    fi
+    
+    if $has_legend; then
+        echo
+    fi
+}
+
 insert_result() {
     if [[ ! -f "$RESULT_FILE" ]]; then
         echo -e "${RED}No result to insert${RESET}"
@@ -389,13 +545,23 @@ insert_result() {
     # Read result and strip trailing whitespace/newlines
     RESULT=$(cat "$RESULT_FILE" | tr -d '\r' | sed 's/[[:space:]]*$//')
     
-    # Send to the source pane using -l for literal text
-    if ! tmux send-keys -t "$SOURCE_PANE" -l "$RESULT" 2>&1; then
-        echo -e "${RED}Failed to insert (pane: $SOURCE_PANE)${RESET}"
-        return 1
+    # Check if result contains special keys
+    if contains_special_keys "$RESULT"; then
+        echo -e "${CYAN}📋 Sending key sequence...${RESET}"
+        if ! send_with_special_keys "$RESULT" "$SOURCE_PANE" 2>&1; then
+            echo -e "${RED}Failed to send keys (pane: $SOURCE_PANE)${RESET}"
+            return 1
+        fi
+        echo -e "${GREEN}✓ Key sequence sent to terminal${RESET}"
+    else
+        # Send to the source pane using -l for literal text
+        if ! tmux send-keys -t "$SOURCE_PANE" -l "$RESULT" 2>&1; then
+            echo -e "${RED}Failed to insert (pane: $SOURCE_PANE)${RESET}"
+            return 1
+        fi
+        echo -e "${GREEN}✓ Inserted to terminal${RESET}"
     fi
     
-    echo -e "${GREEN}✓ Inserted to terminal${RESET}"
     sleep 0.3
     return 0
 }

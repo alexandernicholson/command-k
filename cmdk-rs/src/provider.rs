@@ -241,6 +241,28 @@ CRITICAL RULES:
 - Single command only (use && or ; for multiple)
 - If asked for explanation, then explain - otherwise just the command
 
+SPECIAL KEYS:
+When the user needs to press special keys (like exiting vim, or keyboard shortcuts), use this notation:
+- <Esc> - Escape key
+- <Enter> or <CR> - Enter/Return key
+- <Tab> - Tab key
+- <BS> - Backspace
+- <Del> - Delete
+- <Up>, <Down>, <Left>, <Right> - Arrow keys
+- <C-x> - Ctrl+x (e.g., <C-c> for Ctrl+C, <C-d> for Ctrl+D)
+- <M-x> or <A-x> - Alt+x
+- <F1> through <F12> - Function keys
+- <Space> - Space (when it needs to be explicit)
+
+For vim/vi operations:
+- Always consider the current mode (INSERT, NORMAL, VISUAL, COMMAND)
+- If in INSERT mode, include <Esc> before normal mode commands
+- Example: To save and quit from INSERT mode: <Esc>:wq<Enter>
+- Example: To exit without saving from INSERT mode: <Esc>:q!<Enter>
+
+For tmux operations:
+- Use prefix notation like: <C-b>d (Ctrl+B then d)
+
 "#,
     );
 
